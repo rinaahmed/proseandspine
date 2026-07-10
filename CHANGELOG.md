@@ -4,6 +4,28 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v12] — 2026-07-10
+
+### Added
+- **Automatic cover fetch after Goodreads import** — immediately after importing, a background pass looks up covers for every book without a thumbnail. Uses ISBN first (from the CSV), then falls back to a title/author search via Open Library. Books update on-screen as covers arrive.
+- **"Fetch missing covers" button in Settings** — runs the same cover pass on demand at any time, for any books in your library that have no cover.
+- Progress banner at the bottom of the screen shows "Fetching covers… N / total" with a stop button (✕) to cancel mid-run.
+- 250 ms delay between requests to stay within Open Library's rate limits.
+
+---
+
+## [v11] — 2026-07-10
+
+### Added
+- **Goodreads CSV import** — import your entire Goodreads library in one step. Export from Goodreads → My Books → Import/Export → Export Library, then tap "Import from Goodreads" in Settings and pick the file.
+  - Shelf mapping: read → Read, currently-reading → Currently Reading, to-read → TBR
+  - Imports: title, author (converts "Last, First" to "First Last"), rating, format (paperback/hardcover/ebook/audiobook), date read, date added, review, private notes, custom bookshelves (as tags), ISBN
+  - Merge with existing library or replace all books
+  - Languages default to English (Goodreads CSV does not include language data)
+  - Includes a robust CSV parser that correctly handles quoted fields and escaped quotes
+
+---
+
 ## [v10] — 2026-07-10
 
 ### Fixed

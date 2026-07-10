@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
   <div id="staging-banner" class="staging-banner hidden" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v10
+    ⚠ STAGING &nbsp;·&nbsp; v12
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v10</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v12</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
     </div>
 
@@ -82,6 +82,12 @@
 
   <!-- ── FAB ────────────────────────────────────────────────────────────── -->
   <button id="fab" class="fab" aria-label="Add a book">+</button>
+
+  <!-- ── Cover-fetch progress banner ──────────────────────────────────── -->
+  <div id="cover-fetch-banner" class="cover-fetch-banner hidden" aria-live="polite">
+    <span id="cover-fetch-text">Fetching covers…</span>
+    <button id="cover-fetch-stop" class="cover-fetch-stop" aria-label="Stop">✕</button>
+  </div>
 
 </div><!-- /#app -->
 
@@ -272,12 +278,45 @@
       <button class="modal-close" id="settings-close" aria-label="Close">×</button>
     </div>
     <div class="settings-body">
-      <h3>Data backup</h3>
+      <h3>Goodreads</h3>
+      <p class="settings-hint">Export your library from Goodreads → My Books → Import/Export → Export Library, then import the CSV here.</p>
+      <div class="settings-actions">
+        <button id="btn-goodreads-import" class="btn btn-primary">📚 Import from Goodreads</button>
+        <input type="file" id="goodreads-file" accept=".csv" style="display:none" aria-hidden="true">
+      </div>
+
+      <h3 style="margin-top:1.25rem">Covers</h3>
+      <p class="settings-hint">Look up missing covers for all books using Open Library.</p>
+      <div class="settings-actions">
+        <button id="btn-fetch-covers" class="btn btn-secondary">🖼 Fetch missing covers</button>
+      </div>
+
+      <h3 style="margin-top:1.25rem">Data backup</h3>
       <p class="settings-hint">Export often — this is your only backup!</p>
       <div class="settings-actions">
         <button id="btn-export" class="btn btn-primary">⬇ Export JSON</button>
         <button id="btn-import" class="btn btn-secondary">⬆ Import JSON</button>
         <input type="file" id="import-file" accept=".json" style="display:none" aria-hidden="true">
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Goodreads-import Modal ─────────────────────────────────────────────── -->
+<div id="goodreads-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goodreads-modal-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content modal-content--sm">
+    <div class="modal-header">
+      <h2 id="goodreads-modal-title">Import from Goodreads</h2>
+    </div>
+    <div class="import-body">
+      <p>Found <strong id="goodreads-count">0</strong> books in your Goodreads export. What should we do?</p>
+      <p id="goodreads-note" class="settings-hint" style="margin-top:0.5rem">Languages will be set to English — you can update individual books afterwards.</p>
+      <div class="import-actions">
+        <button id="btn-goodreads-merge"   class="btn btn-primary">Merge with existing</button>
+        <button id="btn-goodreads-replace" class="btn btn-danger">Replace all my books</button>
+        <button id="btn-goodreads-cancel"  class="btn btn-secondary">Cancel</button>
       </div>
     </div>
   </div>
