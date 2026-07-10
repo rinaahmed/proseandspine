@@ -438,9 +438,14 @@ function onQSInput() {
   spinner.classList.remove('hidden');
 
   _searchDebounce = setTimeout(async () => {
-    const books = await searchBooks(q);
+    const { results: books, error } = await searchBooks(q);
     spinner.classList.add('hidden');
-    renderQSResults(books);
+    if (error) {
+      results.innerHTML = `<li class="qs-no-results qs-error">${error}</li>`;
+      results.classList.remove('hidden');
+    } else {
+      renderQSResults(books);
+    }
   }, 350);
 }
 

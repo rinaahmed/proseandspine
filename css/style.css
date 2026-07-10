@@ -886,6 +886,7 @@ body:has(.staging-banner:not(.hidden)) .header {
   color: var(--text3);
   font-size: 0.85rem;
 }
+.qs-error { color: var(--danger); }
 
 /* Divider */
 .qs-divider {
