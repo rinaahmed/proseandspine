@@ -115,11 +115,14 @@ body:has(.staging-banner:not(.hidden)) .header {
 .app-version {
   font-family: var(--font-sans);
   font-size: 0.65rem;
-  font-weight: 500;
-  color: var(--text3);
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.05em;
   vertical-align: middle;
-  margin-left: 0.3rem;
+  margin-left: 0.4rem;
+  background: var(--accent-light);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
 }
 
 .icon-btn {
@@ -253,6 +256,7 @@ body:has(.staging-banner:not(.hidden)) .header {
   flex-direction: column;
   transition: box-shadow 0.2s, transform 0.2s;
 }
+.book-card { cursor: pointer; }
 .book-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
 
 /* Thumbnail strip at top of card */
