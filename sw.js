@@ -1,4 +1,4 @@
-const CACHE = 'proseandspine-v1';
+const CACHE = 'proseandspine-v2';
 
 const APP_SHELL = [
   '/',
@@ -6,6 +6,7 @@ const APP_SHELL = [
   '/css/style.css',
   '/js/db.js',
   '/js/app.js',
+  '/js/books-api.js',
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/apple-touch-icon.svg',

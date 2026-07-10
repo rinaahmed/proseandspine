@@ -90,8 +90,48 @@
       <button class="modal-close" id="modal-close" aria-label="Close">×</button>
     </div>
 
-    <form id="book-form" class="book-form" novalidate>
+    <!-- Quick-search panel (shown by default for new books) -->
+    <div id="quick-search-panel" class="quick-search-panel">
+      <div class="qs-search-row">
+        <div class="qs-input-wrap">
+          <span class="qs-icon">🔍</span>
+          <input type="search" id="qs-input" autocomplete="off" placeholder="Search by title, author, or ISBN…" aria-label="Search books">
+          <span id="qs-spinner" class="qs-spinner hidden" aria-hidden="true"></span>
+        </div>
+        <button type="button" id="qs-scan-btn" class="qs-scan-btn hidden" aria-label="Scan barcode with camera" title="Scan barcode">📷</button>
+      </div>
+      <ul id="qs-results" class="qs-results hidden" role="listbox" aria-label="Search results"></ul>
+
+      <!-- Camera view for barcode scanning -->
+      <div id="qs-camera-wrap" class="qs-camera-wrap hidden">
+        <video id="qs-video" autoplay playsinline muted></video>
+        <div class="qs-camera-overlay">
+          <div class="qs-scan-line"></div>
+          <p class="qs-camera-hint">Point at the barcode on the back of the book</p>
+        </div>
+        <button type="button" id="qs-camera-close" class="btn btn-secondary qs-camera-close-btn">Cancel</button>
+      </div>
+
+      <div class="qs-divider">
+        <span>or</span>
+      </div>
+      <button type="button" id="qs-manual-btn" class="btn btn-secondary qs-manual-btn">Fill in manually</button>
+    </div>
+
+    <form id="book-form" class="book-form hidden" novalidate>
       <input type="hidden" id="field-id">
+      <input type="hidden" id="field-thumbnail">
+      <input type="hidden" id="field-google-id">
+
+      <!-- Prefilled book preview (shown after search pick) -->
+      <div id="book-preview-header" class="book-preview-header hidden">
+        <img id="preview-thumb" class="preview-thumb" src="" alt="" loading="lazy">
+        <div class="preview-meta">
+          <p id="preview-title-text" class="preview-title-text"></p>
+          <p id="preview-author-text" class="preview-author-text"></p>
+          <button type="button" id="btn-change-book" class="btn-link">Search again</button>
+        </div>
+      </div>
 
       <div class="form-group">
         <label for="field-title">Title <span aria-hidden="true">*</span></label>
@@ -251,5 +291,6 @@
 
 
 <script type="module" src="/js/app.js"></script>
+<!-- books-api.js is imported as a module by app.js -->
 </body>
 </html>

@@ -1,4 +1,5 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks } from './db.js';
+import { searchBooks, lookupISBN, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -151,6 +152,15 @@ function bookCardHTML(book) {
 
   const tags = (book.tags || '').split(',').map(t => t.trim()).filter(Boolean);
 
+  // Thumbnail
+  const thumbInitial = (book.title || '?')[0].toUpperCase();
+  const thumbHTML = book.thumbnail
+    ? `<div class="card-thumb-wrap">
+        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy"
+          onerror="this.parentElement.innerHTML='<div class=\\"card-thumb-placeholder\\">${thumbInitial}</div>'">
+       </div>`
+    : `<div class="card-thumb-wrap"><div class="card-thumb-placeholder">${thumbInitial}</div></div>`;
+
   let progressHTML = '';
   if (book.shelf === 'reading' && book.progress && book.progress.value) {
     const pct = book.progress.type === 'percent'
@@ -179,6 +189,7 @@ function bookCardHTML(book) {
 
   return `
     <article class="book-card" data-id="${book.id}">
+      ${thumbHTML}
       <div class="card-body">
         <div class="card-header">
           <h3 class="book-title ${titleClass}" dir="${titleDir}">${escape(book.title)}</h3>
@@ -331,31 +342,50 @@ function buildStarInput(containerId, hiddenInputId) {
   return { setVal };
 }
 
-// ─── Book Modal ───────────────────────────────────────────────────────────────
+// ─── Quick-search logic ───────────────────────────────────────────────────────
 
-let starInputMain = null;
+let _searchDebounce = null;
+let _cameraStream = null;
+let _barcodeInterval = null;
 
-function openBookModal(book = null) {
-  const modal = document.getElementById('book-modal');
+function showQSPanel() {
+  document.getElementById('quick-search-panel').classList.remove('hidden');
+  document.getElementById('book-form').classList.add('hidden');
+  document.getElementById('qs-input').value = '';
+  document.getElementById('qs-results').classList.add('hidden');
+  document.getElementById('qs-results').innerHTML = '';
+  // Show barcode scan button only if BarcodeDetector is available
+  document.getElementById('qs-scan-btn').classList.toggle('hidden', !isBarcodeSupported());
+  setTimeout(() => document.getElementById('qs-input').focus(), 60);
+}
+
+function showFormPanel(book = null) {
+  document.getElementById('quick-search-panel').classList.add('hidden');
+  document.getElementById('book-form').classList.remove('hidden');
+  stopCamera();
+  if (book) {
+    fillFormFromBook(book);
+  }
+}
+
+function fillFormFromBook(book) {
   const form = document.getElementById('book-form');
-  const title = document.getElementById('modal-title');
-  const deleteBtn = document.getElementById('btn-delete');
-
-  title.textContent = book ? 'Edit Book' : 'Add Book';
   form.reset();
-  document.getElementById('field-id').value = book ? book.id : '';
-  document.getElementById('field-title').value = book ? (book.title || '') : '';
-  document.getElementById('field-author').value = book ? (book.author || '') : '';
-  document.getElementById('field-language').value = book ? (book.language || 'en') : 'en';
-  document.getElementById('field-format').value = book ? (book.format || '') : '';
-  document.getElementById('field-shelf').value = book ? (book.shelf || state.shelf) : state.shelf;
-  document.getElementById('field-rating').value = book ? (book.rating || 0) : 0;
-  document.getElementById('field-date-started').value = book ? (book.dateStarted || '') : '';
-  document.getElementById('field-date-finished').value = book ? (book.dateFinished || '') : '';
-  document.getElementById('field-tags').value = book ? (book.tags || '') : '';
-  document.getElementById('field-notes').value = book ? (book.notes || '') : '';
+  document.getElementById('field-id').value = book.id || '';
+  document.getElementById('field-thumbnail').value = book.thumbnail || '';
+  document.getElementById('field-google-id').value = book.googleId || '';
+  document.getElementById('field-title').value = book.title || '';
+  document.getElementById('field-author').value = book.author || '';
+  document.getElementById('field-language').value = book.language || 'en';
+  document.getElementById('field-format').value = book.format || '';
+  document.getElementById('field-shelf').value = book.shelf || state.shelf;
+  document.getElementById('field-rating').value = book.rating || 0;
+  document.getElementById('field-date-started').value = book.dateStarted || '';
+  document.getElementById('field-date-finished').value = book.dateFinished || '';
+  document.getElementById('field-tags').value = book.tags || '';
+  document.getElementById('field-notes').value = book.notes || '';
 
-  if (book && book.progress) {
+  if (book.progress) {
     document.getElementById('field-progress-type').value = book.progress.type || 'percent';
     document.getElementById('field-progress-value').value = book.progress.value || '';
   } else {
@@ -363,20 +393,178 @@ function openBookModal(book = null) {
     document.getElementById('field-progress-value').value = '';
   }
 
-  deleteBtn.classList.toggle('hidden', !book);
-
   updateProgressVisibility();
 
   if (!starInputMain) {
     starInputMain = buildStarInput('star-input', 'field-rating');
   }
-  starInputMain.setVal(book ? (book.rating || 0) : 0);
+  starInputMain.setVal(book.rating || 0);
+
+  // Show or hide the preview header
+  const previewHeader = document.getElementById('book-preview-header');
+  const thumb = document.getElementById('preview-thumb');
+  const titleText = document.getElementById('preview-title-text');
+  const authorText = document.getElementById('preview-author-text');
+
+  if (book.googleId && (book.title || book.thumbnail)) {
+    previewHeader.classList.remove('hidden');
+    titleText.textContent = book.title || '';
+    authorText.textContent = book.author || '';
+    if (book.thumbnail) {
+      thumb.src = book.thumbnail;
+      thumb.style.display = '';
+    } else {
+      thumb.style.display = 'none';
+    }
+  } else {
+    previewHeader.classList.add('hidden');
+  }
+
+  document.getElementById('btn-delete').classList.toggle('hidden', !book.id);
+}
+
+function onQSInput() {
+  clearTimeout(_searchDebounce);
+  const q = document.getElementById('qs-input').value.trim();
+  const results = document.getElementById('qs-results');
+  const spinner = document.getElementById('qs-spinner');
+
+  if (!q) {
+    results.classList.add('hidden');
+    spinner.classList.add('hidden');
+    return;
+  }
+
+  spinner.classList.remove('hidden');
+
+  _searchDebounce = setTimeout(async () => {
+    const books = await searchBooks(q);
+    spinner.classList.add('hidden');
+    renderQSResults(books);
+  }, 350);
+}
+
+function renderQSResults(books) {
+  const results = document.getElementById('qs-results');
+  if (!books.length) {
+    results.innerHTML = '<li class="qs-no-results">No results — try a different title or spell it out</li>';
+    results.classList.remove('hidden');
+    return;
+  }
+
+  results.innerHTML = books.map((b, i) => {
+    const year = (b.publishedDate || '').slice(0, 4);
+    const thumbEl = b.thumbnail
+      ? `<img class="qs-result-thumb" src="${escape(b.thumbnail)}" alt="" loading="lazy">`
+      : `<div class="qs-result-thumb-placeholder">📖</div>`;
+    return `<li class="qs-result-item" role="option" tabindex="0" data-index="${i}">
+      ${thumbEl}
+      <div class="qs-result-info">
+        <div class="qs-result-title">${escape(b.title)}</div>
+        <div class="qs-result-author">${escape(b.author)}</div>
+        ${year ? `<div class="qs-result-year">${year}</div>` : ''}
+      </div>
+    </li>`;
+  }).join('');
+
+  results.classList.remove('hidden');
+
+  // Store result data for click handler
+  results._data = books;
+}
+
+function onQSResultClick(e) {
+  const item = e.target.closest('.qs-result-item');
+  if (!item) return;
+  const results = document.getElementById('qs-results');
+  const book = results._data[parseInt(item.dataset.index)];
+  if (!book) return;
+  showFormPanel(book);
+}
+
+function onQSResultKeydown(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    onQSResultClick({ target: e.target });
+  }
+}
+
+// ─── Camera / barcode scanning ────────────────────────────────────────────────
+
+async function startCamera() {
+  const wrap = document.getElementById('qs-camera-wrap');
+  const video = document.getElementById('qs-video');
+  wrap.classList.remove('hidden');
+
+  try {
+    _cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },
+      audio: false,
+    });
+    video.srcObject = _cameraStream;
+    await video.play();
+
+    // Poll for barcode every 500ms
+    _barcodeInterval = setInterval(async () => {
+      const code = await detectBarcodeFromVideoFrame(video);
+      if (!code) return;
+      stopCamera();
+      document.getElementById('qs-spinner').classList.remove('hidden');
+      const book = await lookupISBN(code);
+      document.getElementById('qs-spinner').classList.add('hidden');
+      if (book) {
+        showFormPanel(book);
+      } else {
+        // Barcode found but no book match — prefill the search
+        document.getElementById('qs-input').value = code;
+        await onQSInput();
+      }
+    }, 500);
+  } catch {
+    wrap.classList.add('hidden');
+    alert('Camera access denied or not available.');
+  }
+}
+
+function stopCamera() {
+  clearInterval(_barcodeInterval);
+  _barcodeInterval = null;
+  if (_cameraStream) {
+    _cameraStream.getTracks().forEach(t => t.stop());
+    _cameraStream = null;
+  }
+  document.getElementById('qs-camera-wrap').classList.add('hidden');
+}
+
+// ─── Book Modal ───────────────────────────────────────────────────────────────
+
+let starInputMain = null;
+
+function openBookModal(book = null) {
+  const modal = document.getElementById('book-modal');
+  document.getElementById('modal-title').textContent = book ? 'Edit Book' : 'Add Book';
+
+  if (book) {
+    // Editing existing: skip search panel, go straight to form
+    showFormPanel(book);
+  } else {
+    // New book: show quick-search panel first
+    showQSPanel();
+    // Reset form defaults for new book
+    document.getElementById('book-form').reset();
+    document.getElementById('field-id').value = '';
+    document.getElementById('field-thumbnail').value = '';
+    document.getElementById('field-google-id').value = '';
+    document.getElementById('field-shelf').value = state.shelf;
+    document.getElementById('book-preview-header').classList.add('hidden');
+    document.getElementById('btn-delete').classList.add('hidden');
+  }
 
   modal.classList.remove('hidden');
-  document.getElementById('field-title').focus();
 }
 
 function closeBookModal() {
+  stopCamera();
   document.getElementById('book-modal').classList.add('hidden');
 }
 
@@ -402,6 +590,8 @@ async function handleBookSubmit(e) {
     dateFinished: document.getElementById('field-date-finished').value || null,
     tags: document.getElementById('field-tags').value.trim(),
     notes: document.getElementById('field-notes').value.trim(),
+    thumbnail: document.getElementById('field-thumbnail').value || null,
+    googleId: document.getElementById('field-google-id').value || null,
     progress: shelf === 'reading' && progressValue
       ? { type: document.getElementById('field-progress-type').value, value: parseFloat(progressValue) }
       : null,
@@ -562,6 +752,24 @@ function bindEvents() {
   document.getElementById('book-modal').querySelector('.modal-overlay').addEventListener('click', closeBookModal);
   document.getElementById('book-form').addEventListener('submit', handleBookSubmit);
   document.getElementById('field-shelf').addEventListener('change', updateProgressVisibility);
+
+  // Quick-search panel
+  document.getElementById('qs-input').addEventListener('input', onQSInput);
+  document.getElementById('qs-results').addEventListener('click', onQSResultClick);
+  document.getElementById('qs-results').addEventListener('keydown', onQSResultKeydown);
+  document.getElementById('qs-manual-btn').addEventListener('click', () => {
+    showFormPanel({ shelf: state.shelf });
+    // Initialize star input since we're showing the form
+    if (!starInputMain) starInputMain = buildStarInput('star-input', 'field-rating');
+    starInputMain.setVal(0);
+    document.getElementById('book-preview-header').classList.add('hidden');
+    setTimeout(() => document.getElementById('field-title').focus(), 60);
+  });
+  document.getElementById('btn-change-book').addEventListener('click', () => {
+    showQSPanel();
+  });
+  document.getElementById('qs-scan-btn').addEventListener('click', startCamera);
+  document.getElementById('qs-camera-close').addEventListener('click', stopCamera);
 
   document.getElementById('btn-delete').addEventListener('click', async () => {
     const id = parseInt(document.getElementById('field-id').value);
