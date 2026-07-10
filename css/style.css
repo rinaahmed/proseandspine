@@ -60,6 +60,30 @@ body {
   line-height: 1.5;
 }
 
+/* ─── Staging banner ─────────────────────────────────────────────────────── */
+
+.staging-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #b45309;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 0.25rem 0.5rem;
+  pointer-events: none;
+}
+
+/* Push everything down when banner is visible */
+body:has(.staging-banner:not(.hidden)) .header {
+  top: 26px;
+}
+
 /* ─── Header ────────────────────────────────────────────────────────────── */
 
 .header {
