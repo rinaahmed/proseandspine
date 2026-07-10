@@ -352,28 +352,28 @@ function showQSPanel() {
   document.getElementById('quick-search-panel').classList.remove('hidden');
   document.getElementById('book-form').classList.add('hidden');
   document.getElementById('qs-input').value = '';
-  document.getElementById('qs-results').classList.add('hidden');
-  document.getElementById('qs-results').innerHTML = '';
-  // Show barcode scan button only if BarcodeDetector is available
+  const resultsList = document.getElementById('qs-results');
+  resultsList.classList.add('hidden');
+  resultsList.innerHTML = '';
+  resultsList._data = [];
+  document.getElementById('qs-spinner').classList.add('hidden');
   document.getElementById('qs-scan-btn').classList.toggle('hidden', !isBarcodeSupported());
-  setTimeout(() => document.getElementById('qs-input').focus(), 60);
+  setTimeout(() => document.getElementById('qs-input').focus(), 80);
 }
 
 function showFormPanel(book = null) {
   document.getElementById('quick-search-panel').classList.add('hidden');
   document.getElementById('book-form').classList.remove('hidden');
   stopCamera();
-  if (book) {
-    fillFormFromBook(book);
-  }
+  fillFormFromBook(book || {});
+  setTimeout(() => document.getElementById('field-title').focus(), 80);
 }
 
 function fillFormFromBook(book) {
-  const form = document.getElementById('book-form');
-  form.reset();
+  document.getElementById('book-form').reset();
   document.getElementById('field-id').value = book.id || '';
   document.getElementById('field-thumbnail').value = book.thumbnail || '';
-  document.getElementById('field-google-id').value = book.googleId || '';
+  document.getElementById('field-open-lib-key').value = book.openLibKey || '';
   document.getElementById('field-title').value = book.title || '';
   document.getElementById('field-author').value = book.author || '';
   document.getElementById('field-language').value = book.language || 'en';
@@ -383,7 +383,7 @@ function fillFormFromBook(book) {
   document.getElementById('field-date-started').value = book.dateStarted || '';
   document.getElementById('field-date-finished').value = book.dateFinished || '';
   document.getElementById('field-tags').value = book.tags || '';
-  document.getElementById('field-notes').value = book.notes || '';
+  document.getElementById('field-notes').value = book.description || book.notes || '';
 
   if (book.progress) {
     document.getElementById('field-progress-type').value = book.progress.type || 'percent';
@@ -394,30 +394,19 @@ function fillFormFromBook(book) {
   }
 
   updateProgressVisibility();
-
-  if (!starInputMain) {
-    starInputMain = buildStarInput('star-input', 'field-rating');
-  }
+  if (!starInputMain) starInputMain = buildStarInput('star-input', 'field-rating');
   starInputMain.setVal(book.rating || 0);
 
-  // Show or hide the preview header
+  // Preview header — show when we have a search-picked book with title
+  const fromSearch = !!(book.openLibKey && book.title);
   const previewHeader = document.getElementById('book-preview-header');
-  const thumb = document.getElementById('preview-thumb');
-  const titleText = document.getElementById('preview-title-text');
-  const authorText = document.getElementById('preview-author-text');
-
-  if (book.googleId && (book.title || book.thumbnail)) {
-    previewHeader.classList.remove('hidden');
-    titleText.textContent = book.title || '';
-    authorText.textContent = book.author || '';
-    if (book.thumbnail) {
-      thumb.src = book.thumbnail;
-      thumb.style.display = '';
-    } else {
-      thumb.style.display = 'none';
-    }
-  } else {
-    previewHeader.classList.add('hidden');
+  previewHeader.classList.toggle('hidden', !fromSearch);
+  if (fromSearch) {
+    document.getElementById('preview-title-text').textContent = book.title;
+    document.getElementById('preview-author-text').textContent = book.author || '';
+    const thumb = document.getElementById('preview-thumb');
+    if (book.thumbnail) { thumb.src = book.thumbnail; thumb.style.display = ''; }
+    else { thumb.style.display = 'none'; }
   }
 
   document.getElementById('btn-delete').classList.toggle('hidden', !book.id);
@@ -426,38 +415,41 @@ function fillFormFromBook(book) {
 function onQSInput() {
   clearTimeout(_searchDebounce);
   const q = document.getElementById('qs-input').value.trim();
-  const results = document.getElementById('qs-results');
+  const resultsList = document.getElementById('qs-results');
   const spinner = document.getElementById('qs-spinner');
 
   if (!q) {
-    results.classList.add('hidden');
+    resultsList.classList.add('hidden');
     spinner.classList.add('hidden');
     return;
   }
 
   spinner.classList.remove('hidden');
+  resultsList.classList.add('hidden');
 
   _searchDebounce = setTimeout(async () => {
-    const { results: books, error } = await searchBooks(q);
+    const { results, error } = await searchBooks(q);
     spinner.classList.add('hidden');
     if (error) {
-      results.innerHTML = `<li class="qs-no-results qs-error">${error}</li>`;
-      results.classList.remove('hidden');
+      resultsList.innerHTML = `<li class="qs-result-message qs-error">${error}</li>`;
+      resultsList.classList.remove('hidden');
     } else {
-      renderQSResults(books);
+      renderQSResults(results, q);
     }
-  }, 350);
+  }, 400);
 }
 
-function renderQSResults(books) {
-  const results = document.getElementById('qs-results');
+function renderQSResults(books, query) {
+  const resultsList = document.getElementById('qs-results');
+  resultsList._data = books;
+
   if (!books.length) {
-    results.innerHTML = '<li class="qs-no-results">No results — try a different title or spell it out</li>';
-    results.classList.remove('hidden');
+    resultsList.innerHTML = `<li class="qs-result-message">No results for "<strong>${escape(query)}</strong>" — tap <em>Add title only</em> below.</li>`;
+    resultsList.classList.remove('hidden');
     return;
   }
 
-  results.innerHTML = books.map((b, i) => {
+  resultsList.innerHTML = books.map((b, i) => {
     const year = (b.publishedDate || '').slice(0, 4);
     const thumbEl = b.thumbnail
       ? `<img class="qs-result-thumb" src="${escape(b.thumbnail)}" alt="" loading="lazy">`
@@ -465,24 +457,21 @@ function renderQSResults(books) {
     return `<li class="qs-result-item" role="option" tabindex="0" data-index="${i}">
       ${thumbEl}
       <div class="qs-result-info">
-        <div class="qs-result-title">${escape(b.title)}</div>
-        <div class="qs-result-author">${escape(b.author)}</div>
+        <div class="qs-result-title" dir="auto">${escape(b.title)}</div>
+        <div class="qs-result-author" dir="auto">${escape(b.author)}</div>
         ${year ? `<div class="qs-result-year">${year}</div>` : ''}
       </div>
     </li>`;
   }).join('');
 
-  results.classList.remove('hidden');
-
-  // Store result data for click handler
-  results._data = books;
+  resultsList.classList.remove('hidden');
 }
 
 function onQSResultClick(e) {
   const item = e.target.closest('.qs-result-item');
   if (!item) return;
-  const results = document.getElementById('qs-results');
-  const book = results._data[parseInt(item.dataset.index)];
+  const resultsList = document.getElementById('qs-results');
+  const book = (resultsList._data || [])[parseInt(item.dataset.index)];
   if (!book) return;
   showFormPanel(book);
 }
@@ -494,22 +483,16 @@ function onQSResultKeydown(e) {
   }
 }
 
-// ─── Camera / barcode scanning ────────────────────────────────────────────────
+// ─── Camera / barcode ─────────────────────────────────────────────────────────
 
 async function startCamera() {
   const wrap = document.getElementById('qs-camera-wrap');
   const video = document.getElementById('qs-video');
   wrap.classList.remove('hidden');
-
   try {
-    _cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
-      audio: false,
-    });
+    _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
     video.srcObject = _cameraStream;
     await video.play();
-
-    // Poll for barcode every 500ms
     _barcodeInterval = setInterval(async () => {
       const code = await detectBarcodeFromVideoFrame(video);
       if (!code) return;
@@ -517,14 +500,9 @@ async function startCamera() {
       document.getElementById('qs-spinner').classList.remove('hidden');
       const book = await lookupISBN(code);
       document.getElementById('qs-spinner').classList.add('hidden');
-      if (book) {
-        showFormPanel(book);
-      } else {
-        // Barcode found but no book match — prefill the search
-        document.getElementById('qs-input').value = code;
-        await onQSInput();
-      }
-    }, 500);
+      if (book) { showFormPanel(book); }
+      else { document.getElementById('qs-input').value = code; onQSInput(); }
+    }, 600);
   } catch {
     wrap.classList.add('hidden');
     alert('Camera access denied or not available.');
@@ -534,10 +512,7 @@ async function startCamera() {
 function stopCamera() {
   clearInterval(_barcodeInterval);
   _barcodeInterval = null;
-  if (_cameraStream) {
-    _cameraStream.getTracks().forEach(t => t.stop());
-    _cameraStream = null;
-  }
+  if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
   document.getElementById('qs-camera-wrap').classList.add('hidden');
 }
 
@@ -546,26 +521,13 @@ function stopCamera() {
 let starInputMain = null;
 
 function openBookModal(book = null) {
-  const modal = document.getElementById('book-modal');
   document.getElementById('modal-title').textContent = book ? 'Edit Book' : 'Add Book';
-
   if (book) {
-    // Editing existing: skip search panel, go straight to form
     showFormPanel(book);
   } else {
-    // New book: show quick-search panel first
     showQSPanel();
-    // Reset form defaults for new book
-    document.getElementById('book-form').reset();
-    document.getElementById('field-id').value = '';
-    document.getElementById('field-thumbnail').value = '';
-    document.getElementById('field-google-id').value = '';
-    document.getElementById('field-shelf').value = state.shelf;
-    document.getElementById('book-preview-header').classList.add('hidden');
-    document.getElementById('btn-delete').classList.add('hidden');
   }
-
-  modal.classList.remove('hidden');
+  document.getElementById('book-modal').classList.remove('hidden');
 }
 
 function closeBookModal() {
@@ -596,7 +558,7 @@ async function handleBookSubmit(e) {
     tags: document.getElementById('field-tags').value.trim(),
     notes: document.getElementById('field-notes').value.trim(),
     thumbnail: document.getElementById('field-thumbnail').value || null,
-    googleId: document.getElementById('field-google-id').value || null,
+    openLibKey: document.getElementById('field-open-lib-key').value || null,
     progress: shelf === 'reading' && progressValue
       ? { type: document.getElementById('field-progress-type').value, value: parseFloat(progressValue) }
       : null,
@@ -763,12 +725,9 @@ function bindEvents() {
   document.getElementById('qs-results').addEventListener('click', onQSResultClick);
   document.getElementById('qs-results').addEventListener('keydown', onQSResultKeydown);
   document.getElementById('qs-manual-btn').addEventListener('click', () => {
-    showFormPanel({ shelf: state.shelf });
-    // Initialize star input since we're showing the form
-    if (!starInputMain) starInputMain = buildStarInput('star-input', 'field-rating');
-    starInputMain.setVal(0);
-    document.getElementById('book-preview-header').classList.add('hidden');
-    setTimeout(() => document.getElementById('field-title').focus(), 60);
+    // Pre-fill title from whatever they typed, then open form
+    const typed = document.getElementById('qs-input').value.trim();
+    showFormPanel({ title: typed, shelf: state.shelf });
   });
   document.getElementById('btn-change-book').addEventListener('click', () => {
     showQSPanel();

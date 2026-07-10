@@ -880,30 +880,25 @@ body:has(.staging-banner:not(.hidden)) .header {
 }
 .qs-result-year { font-size: 0.72rem; color: var(--text3); }
 
-.qs-no-results {
-  padding: 1rem;
-  text-align: center;
+.qs-result-message {
+  padding: 0.85rem 1rem;
   color: var(--text3);
   font-size: 0.85rem;
+  list-style: none;
 }
-.qs-error { color: var(--danger); }
+.qs-error { color: var(--danger) !important; }
 
-/* Divider */
-.qs-divider {
+/* Manual fallback row */
+.qs-manual-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  color: var(--text3);
-  font-size: 0.8rem;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0 0.25rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
 }
-.qs-divider::before, .qs-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.qs-manual-btn { width: 100%; justify-content: center; margin-bottom: 0.25rem; }
+.qs-manual-hint { font-size: 0.82rem; color: var(--text3); }
 
 /* Camera */
 .qs-camera-wrap {

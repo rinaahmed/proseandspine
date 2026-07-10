@@ -95,19 +95,25 @@
       <button class="modal-close" id="modal-close" aria-label="Close">×</button>
     </div>
 
-    <!-- Quick-search panel (shown by default for new books) -->
+    <!-- Quick-search panel (new books only) -->
     <div id="quick-search-panel" class="quick-search-panel">
+
+      <!-- Search row -->
       <div class="qs-search-row">
         <div class="qs-input-wrap">
           <span class="qs-icon">🔍</span>
-          <input type="search" id="qs-input" autocomplete="off" placeholder="Search by title, author, or ISBN…" aria-label="Search books">
+          <input type="search" id="qs-input" autocomplete="off"
+            placeholder="Search by title or author…" aria-label="Search books">
           <span id="qs-spinner" class="qs-spinner hidden" aria-hidden="true"></span>
         </div>
-        <button type="button" id="qs-scan-btn" class="qs-scan-btn hidden" aria-label="Scan barcode with camera" title="Scan barcode">📷</button>
+        <button type="button" id="qs-scan-btn" class="qs-scan-btn hidden"
+          aria-label="Scan barcode" title="Scan ISBN barcode">📷</button>
       </div>
+
+      <!-- Results list -->
       <ul id="qs-results" class="qs-results hidden" role="listbox" aria-label="Search results"></ul>
 
-      <!-- Camera view for barcode scanning -->
+      <!-- Camera -->
       <div id="qs-camera-wrap" class="qs-camera-wrap hidden">
         <video id="qs-video" autoplay playsinline muted></video>
         <div class="qs-camera-overlay">
@@ -117,18 +123,20 @@
         <button type="button" id="qs-camera-close" class="btn btn-secondary qs-camera-close-btn">Cancel</button>
       </div>
 
-      <div class="qs-divider">
-        <span>or</span>
+      <!-- Always-visible manual fallback -->
+      <div class="qs-manual-row">
+        <span class="qs-manual-hint">Can't find it?</span>
+        <button type="button" id="qs-manual-btn" class="btn-link">Add title only →</button>
       </div>
-      <button type="button" id="qs-manual-btn" class="btn btn-secondary qs-manual-btn">Fill in manually</button>
     </div>
 
+    <!-- Full form (edit mode OR after manual tap) -->
     <form id="book-form" class="book-form hidden" novalidate>
       <input type="hidden" id="field-id">
       <input type="hidden" id="field-thumbnail">
-      <input type="hidden" id="field-google-id">
+      <input type="hidden" id="field-open-lib-key">
 
-      <!-- Prefilled book preview (shown after search pick) -->
+      <!-- Selected-book preview header -->
       <div id="book-preview-header" class="book-preview-header hidden">
         <img id="preview-thumb" class="preview-thumb" src="" alt="" loading="lazy">
         <div class="preview-meta">
