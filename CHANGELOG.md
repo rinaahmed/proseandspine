@@ -4,6 +4,18 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v11] — 2026-07-10
+
+### Added
+- **Goodreads CSV import** — import your entire Goodreads library in one step. Export from Goodreads → My Books → Import/Export → Export Library, then tap "Import from Goodreads" in Settings and pick the file.
+  - Shelf mapping: read → Read, currently-reading → Currently Reading, to-read → TBR
+  - Imports: title, author (converts "Last, First" to "First Last"), rating, format (paperback/hardcover/ebook/audiobook), date read, date added, review, private notes, custom bookshelves (as tags), ISBN
+  - Merge with existing library or replace all books
+  - Languages default to English (Goodreads CSV does not include language data)
+  - Includes a robust CSV parser that correctly handles quoted fields and escaped quotes
+
+---
+
 ## [v10] — 2026-07-10
 
 ### Fixed
