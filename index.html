@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v7
+    ⚠ STAGING &nbsp;·&nbsp; v8
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v7</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v8</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
     </div>
 
@@ -323,7 +323,7 @@
 
 <script>
 (async () => {
-  const V = '7';
+  const V = '8';
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);
   if ('serviceWorker' in navigator) {

@@ -259,10 +259,10 @@ body:has(.staging-banner:not(.hidden)) .header {
 .book-card { cursor: pointer; }
 .book-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
 
-/* Thumbnail strip at top of card */
+/* Full book cover at top of card */
 .card-thumb-wrap {
   width: 100%;
-  height: 140px;
+  aspect-ratio: 2 / 3;
   overflow: hidden;
   background: var(--bg3);
   position: relative;
@@ -271,8 +271,7 @@ body:has(.staging-banner:not(.hidden)) .header {
 .card-thumb-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  object-fit: contain;
   display: block;
 }
 .card-thumb-placeholder {
