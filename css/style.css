@@ -112,6 +112,16 @@ body:has(.staging-banner:not(.hidden)) .header {
   letter-spacing: -0.01em;
 }
 
+.app-version {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text3);
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  margin-left: 0.3rem;
+}
+
 .icon-btn {
   background: none;
   border: none;
