@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v9] — 2026-07-10
+
+### Fixed
+- **Search bar cropped by sticky header** — the filter bar was in normal document flow while the header was `position: sticky`, so scrolling caused the header to overlap and crop the search input. Fixed by moving the filter bar inside the `<header>` element so both stick together as one unit. Works correctly with and without the staging banner.
+
+---
+
 ## [v8] — 2026-07-10
 
 ### Changed
