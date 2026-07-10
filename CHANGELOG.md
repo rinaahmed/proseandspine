@@ -4,6 +4,16 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v12] — 2026-07-10
+
+### Added
+- **Automatic cover fetch after Goodreads import** — immediately after importing, a background pass looks up covers for every book without a thumbnail. Uses ISBN first (from the CSV), then falls back to a title/author search via Open Library. Books update on-screen as covers arrive.
+- **"Fetch missing covers" button in Settings** — runs the same cover pass on demand at any time, for any books in your library that have no cover.
+- Progress banner at the bottom of the screen shows "Fetching covers… N / total" with a stop button (✕) to cancel mid-run.
+- 250 ms delay between requests to stay within Open Library's rate limits.
+
+---
+
 ## [v11] — 2026-07-10
 
 ### Added

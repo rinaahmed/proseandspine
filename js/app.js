@@ -672,6 +672,50 @@ async function confirmImport(merge) {
   await refreshBooks();
 }
 
+// ─── Cover Fetching ───────────────────────────────────────────────────────────
+
+let _coverFetchAbort = false;
+
+async function fetchMissingCovers(books) {
+  const missing = books.filter(b => !b.thumbnail);
+  if (!missing.length) return;
+
+  _coverFetchAbort = false;
+  const banner = document.getElementById('cover-fetch-banner');
+  const bannerText = document.getElementById('cover-fetch-text');
+  banner.classList.remove('hidden');
+
+  let found = 0;
+  for (let i = 0; i < missing.length; i++) {
+    if (_coverFetchAbort) break;
+    const book = missing[i];
+    bannerText.textContent = `Fetching covers… ${i + 1} / ${missing.length}`;
+
+    let result = null;
+    if (book.isbn) {
+      result = await lookupISBN(book.isbn);
+    }
+    if (!result && book.title) {
+      const { results } = await searchBooks(`${book.title} ${book.author || ''}`.trim(), 1);
+      result = results[0] || null;
+    }
+
+    if (result?.thumbnail) {
+      await updateBook({ ...book, thumbnail: result.thumbnail, openLibKey: result.openLibKey || book.openLibKey });
+      found++;
+      // Refresh state but don't re-render yet to avoid flicker mid-loop
+      state.books = await getAllBooks();
+    }
+
+    // Small delay to be respectful to Open Library
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  banner.classList.add('hidden');
+  await refreshBooks();
+  if (found) bannerText.textContent = `Found covers for ${found} books.`;
+}
+
 // ─── Goodreads Import ─────────────────────────────────────────────────────────
 
 function handleGoodreadsFile(e) {
@@ -696,6 +740,8 @@ async function confirmGoodreadsImport(merge) {
   document.getElementById('goodreads-modal').classList.add('hidden');
   closeSettings();
   await refreshBooks();
+  // Kick off background cover fetch for all books without thumbnails
+  fetchMissingCovers(state.books);
 }
 
 // ─── Data & Navigation ────────────────────────────────────────────────────────
@@ -744,6 +790,16 @@ function bindEvents() {
   document.getElementById('btn-import-cancel').addEventListener('click', () => {
     state.pendingImport = null;
     document.getElementById('import-modal').classList.add('hidden');
+  });
+
+  // Fetch missing covers
+  document.getElementById('btn-fetch-covers').addEventListener('click', () => {
+    closeSettings();
+    fetchMissingCovers(state.books);
+  });
+  document.getElementById('cover-fetch-stop').addEventListener('click', () => {
+    _coverFetchAbort = true;
+    document.getElementById('cover-fetch-banner').classList.add('hidden');
   });
 
   // Goodreads import
