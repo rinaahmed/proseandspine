@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v11
+    ⚠ STAGING &nbsp;·&nbsp; v12
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v11</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v12</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
     </div>
 
@@ -82,6 +82,12 @@
 
   <!-- ── FAB ────────────────────────────────────────────────────────────── -->
   <button id="fab" class="fab" aria-label="Add a book">+</button>
+
+  <!-- ── Cover-fetch progress banner ──────────────────────────────────── -->
+  <div id="cover-fetch-banner" class="cover-fetch-banner hidden" aria-live="polite">
+    <span id="cover-fetch-text">Fetching covers…</span>
+    <button id="cover-fetch-stop" class="cover-fetch-stop" aria-label="Stop">✕</button>
+  </div>
 
 </div><!-- /#app -->
 
@@ -277,6 +283,12 @@
       <div class="settings-actions">
         <button id="btn-goodreads-import" class="btn btn-primary">📚 Import from Goodreads</button>
         <input type="file" id="goodreads-file" accept=".csv" style="display:none" aria-hidden="true">
+      </div>
+
+      <h3 style="margin-top:1.25rem">Covers</h3>
+      <p class="settings-hint">Look up missing covers for all books using Open Library.</p>
+      <div class="settings-actions">
+        <button id="btn-fetch-covers" class="btn btn-secondary">🖼 Fetch missing covers</button>
       </div>
 
       <h3 style="margin-top:1.25rem">Data backup</h3>
