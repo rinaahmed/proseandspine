@@ -197,13 +197,10 @@ function bookCardHTML(book) {
   }
 
   return `
-    <article class="book-card" data-id="${book.id}">
+    <article class="book-card" data-id="${book.id}" data-action="edit" role="button" tabindex="0" aria-label="Edit ${escape(book.title)}">
       ${thumbHTML}
       <div class="card-body">
-        <div class="card-header">
-          <h3 class="book-title ${titleClass}" dir="${titleDir}">${escape(book.title)}</h3>
-          <button class="card-edit-btn" data-action="edit" data-id="${book.id}" aria-label="Edit">✎</button>
-        </div>
+        <h3 class="book-title ${titleClass}" dir="${titleDir}">${escape(book.title)}</h3>
         <p class="book-author ${authorClass}" dir="${authorDir}">${escape(book.author)}</p>
         ${book.rating ? starsHTML(book.rating) : ''}
         ${book.notes ? `<p class="book-notes ${notesClass}" dir="auto">${escape(book.notes)}</p>` : ''}
@@ -774,23 +771,34 @@ function bindEvents() {
 
   // Card actions (delegated)
   document.getElementById('books-grid').addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    const id = parseInt(btn.dataset.id);
-    const action = btn.dataset.action;
-
-    if (action === 'edit') {
-      const book = state.books.find(b => b.id === id);
-      if (book) openBookModal(book);
-    } else if (action === 'finish') {
-      openFinishModal(id);
-    } else if (action === 'start') {
-      const book = state.books.find(b => b.id === id);
-      if (book) {
-        await updateBook({ ...book, shelf: 'reading', dateStarted: book.dateStarted || today() });
-        await refreshBooks();
+    // Action buttons inside the card (finish / start) take priority
+    const btn = e.target.closest('.card-action-btn[data-action]');
+    if (btn) {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const action = btn.dataset.action;
+      if (action === 'finish') { openFinishModal(id); return; }
+      if (action === 'start') {
+        const book = state.books.find(b => b.id === id);
+        if (book) { await updateBook({ ...book, shelf: 'reading', dateStarted: book.dateStarted || today() }); await refreshBooks(); }
+        return;
       }
     }
+    // Tap anywhere on card → edit
+    const card = e.target.closest('.book-card[data-action="edit"]');
+    if (!card) return;
+    const id = parseInt(card.dataset.id);
+    const book = state.books.find(b => b.id === id);
+    if (book) openBookModal(book);
+  });
+
+  document.getElementById('books-grid').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.book-card[data-action="edit"]');
+    if (!card) return;
+    e.preventDefault();
+    const book = state.books.find(b => b.id === parseInt(card.dataset.id));
+    if (book) openBookModal(book);
   });
 
   // Filters
