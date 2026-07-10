@@ -34,7 +34,7 @@
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v5</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v6</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
     </div>
 
@@ -284,6 +284,24 @@
 </div>
 
 
+<!-- ── Delete-confirm Modal ──────────────────────────────────────────────── -->
+<div id="delete-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content modal-content--sm">
+    <div class="modal-header">
+      <h2 id="delete-modal-title">Delete book?</h2>
+    </div>
+    <div class="import-body">
+      <p>This will permanently remove the book from your library.</p>
+      <div class="import-actions">
+        <button id="btn-delete-confirm" class="btn btn-danger">Delete</button>
+        <button id="btn-delete-cancel"  class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ── Import-confirm Modal ───────────────────────────────────────────── -->
 <div id="import-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
   <div class="modal-overlay" tabindex="-1"></div>
@@ -305,7 +323,7 @@
 
 <script>
 (async () => {
-  const V = '5';
+  const V = '6';
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);
   if ('serviceWorker' in navigator) {
