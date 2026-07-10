@@ -1,5 +1,6 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks } from './db.js';
 import { searchBooks, lookupISBN, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
+import { parseGoodreadsCSV } from './goodreads.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -671,6 +672,32 @@ async function confirmImport(merge) {
   await refreshBooks();
 }
 
+// ─── Goodreads Import ─────────────────────────────────────────────────────────
+
+function handleGoodreadsFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const { books, error } = parseGoodreadsCSV(ev.target.result);
+    if (error) { alert(error); return; }
+    state.pendingImport = books;
+    document.getElementById('goodreads-count').textContent = books.length;
+    document.getElementById('goodreads-modal').classList.remove('hidden');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+async function confirmGoodreadsImport(merge) {
+  if (!state.pendingImport) return;
+  await importBooks(state.pendingImport, merge);
+  state.pendingImport = null;
+  document.getElementById('goodreads-modal').classList.add('hidden');
+  closeSettings();
+  await refreshBooks();
+}
+
 // ─── Data & Navigation ────────────────────────────────────────────────────────
 
 async function refreshBooks() {
@@ -717,6 +744,22 @@ function bindEvents() {
   document.getElementById('btn-import-cancel').addEventListener('click', () => {
     state.pendingImport = null;
     document.getElementById('import-modal').classList.add('hidden');
+  });
+
+  // Goodreads import
+  document.getElementById('btn-goodreads-import').addEventListener('click', () => {
+    document.getElementById('goodreads-file').click();
+  });
+  document.getElementById('goodreads-file').addEventListener('change', handleGoodreadsFile);
+  document.getElementById('btn-goodreads-merge').addEventListener('click', () => confirmGoodreadsImport(true));
+  document.getElementById('btn-goodreads-replace').addEventListener('click', () => confirmGoodreadsImport(false));
+  document.getElementById('btn-goodreads-cancel').addEventListener('click', () => {
+    state.pendingImport = null;
+    document.getElementById('goodreads-modal').classList.add('hidden');
+  });
+  document.getElementById('goodreads-modal').querySelector('.modal-overlay').addEventListener('click', () => {
+    state.pendingImport = null;
+    document.getElementById('goodreads-modal').classList.add('hidden');
   });
 
   // Book modal
