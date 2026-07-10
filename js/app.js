@@ -744,13 +744,27 @@ function bindEvents() {
   document.getElementById('qs-scan-btn').addEventListener('click', startCamera);
   document.getElementById('qs-camera-close').addEventListener('click', stopCamera);
 
-  document.getElementById('btn-delete').addEventListener('click', async () => {
+  document.getElementById('btn-delete').addEventListener('click', () => {
     const id = parseInt(document.getElementById('field-id').value);
     if (!id) return;
-    if (!confirm('Delete this book?')) return;
+    document.getElementById('delete-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-delete-confirm').addEventListener('click', async () => {
+    const id = parseInt(document.getElementById('field-id').value);
+    document.getElementById('delete-modal').classList.add('hidden');
+    if (!id) return;
     await deleteBook(id);
     closeBookModal();
     await refreshBooks();
+  });
+
+  document.getElementById('btn-delete-cancel').addEventListener('click', () => {
+    document.getElementById('delete-modal').classList.add('hidden');
+  });
+
+  document.getElementById('delete-modal').querySelector('.modal-overlay').addEventListener('click', () => {
+    document.getElementById('delete-modal').classList.add('hidden');
   });
 
   // Finish modal
@@ -803,7 +817,8 @@ function bindEvents() {
   // Close modals with Escape
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!document.getElementById('book-modal').classList.contains('hidden')) closeBookModal();
+    if (!document.getElementById('delete-modal').classList.contains('hidden')) document.getElementById('delete-modal').classList.add('hidden');
+    else if (!document.getElementById('book-modal').classList.contains('hidden')) closeBookModal();
     else if (!document.getElementById('finish-modal').classList.contains('hidden')) closeFinishModal();
     else if (!document.getElementById('settings-modal').classList.contains('hidden')) closeSettings();
   });
