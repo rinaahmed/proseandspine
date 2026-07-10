@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#8B6914"/>
+  <!-- Open book pages -->
+  <g fill="none" stroke="#F5F0E8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left page -->
+    <path d="M256 340 C200 340 144 320 120 296 L120 172 C144 196 200 216 256 216 Z"
+          fill="#F5F0E8" stroke="none"/>
+    <!-- Right page -->
+    <path d="M256 340 C312 340 368 320 392 296 L392 172 C368 196 312 216 256 216 Z"
+          fill="#EDE8DC" stroke="none"/>
+    <!-- Spine -->
+    <line x1="256" y1="216" x2="256" y2="340" stroke="#C89A2E" stroke-width="4"/>
+    <!-- Left page lines -->
+    <line x1="150" y1="248" x2="238" y2="240" stroke="#C4A96E" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+    <line x1="148" y1="268" x2="237" y2="261" stroke="#C4A96E" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+    <line x1="146" y1="288" x2="236" y2="281" stroke="#C4A96E" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+    <!-- Right page lines -->
+    <line x1="362" y1="248" x2="274" y2="240" stroke="#A89060" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+    <line x1="364" y1="268" x2="275" y2="261" stroke="#A89060" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+    <line x1="366" y1="288" x2="276" y2="281" stroke="#A89060" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+    <!-- Covers (bottom arc) -->
+    <path d="M256 348 C200 348 140 328 116 302 L116 296 C140 322 200 342 256 342 C312 342 372 322 396 296 L396 302 C372 328 312 348 256 348 Z"
+          fill="#C89A2E" stroke="none"/>
+  </g>
+</svg>

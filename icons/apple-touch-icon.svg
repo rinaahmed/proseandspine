@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="40" fill="#8B6914"/>
+  <!-- Left page -->
+  <path d="M90 122 C68 122 48 114 40 106 L40 62 C48 70 68 78 90 78 Z"
+        fill="#F5F0E8"/>
+  <!-- Right page -->
+  <path d="M90 122 C112 122 132 114 140 106 L140 62 C132 70 112 78 90 78 Z"
+        fill="#EDE8DC"/>
+  <!-- Spine line -->
+  <line x1="90" y1="78" x2="90" y2="122" stroke="#C89A2E" stroke-width="2"/>
+  <!-- Left page lines -->
+  <line x1="52" y1="88" x2="83" y2="85" stroke="#C4A96E" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <line x1="51" y1="98" x2="83" y2="95" stroke="#C4A96E" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <line x1="50" y1="108" x2="82" y2="105" stroke="#C4A96E" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+  <!-- Right page lines -->
+  <line x1="128" y1="88" x2="97" y2="85" stroke="#A89060" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+  <line x1="129" y1="98" x2="97" y2="95" stroke="#A89060" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+  <line x1="130" y1="108" x2="98" y2="105" stroke="#A89060" stroke-width="4" stroke-linecap="round" opacity="0.4"/>
+  <!-- Bottom cover highlight -->
+  <path d="M90 126 C68 126 46 118 38 108 L38 106 C46 116 68 124 90 124 C112 124 134 116 142 106 L142 108 C134 118 112 126 90 126 Z"
+        fill="#C89A2E"/>
+</svg>

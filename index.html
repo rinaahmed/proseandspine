@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Prose & Spine</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#8B6914" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#C89A2E" media="(prefers-color-scheme: dark)">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Prose &amp; Spine">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg">
+
+  <!-- Fonts (preconnect first, then actual load) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <h1 class="app-title">Prose &amp; Spine</h1>
+      <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
+    </div>
+
+    <nav class="shelf-nav" role="tablist" aria-label="Shelves">
+      <button class="shelf-btn active" role="tab" aria-selected="true"  data-shelf="reading">Currently Reading</button>
+      <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="tbr">TBR</button>
+      <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="read">Read</button>
+      <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="stats">Stats</button>
+    </nav>
+  </header>
+
+  <!-- ── Filter Bar ─────────────────────────────────────────────────────── -->
+  <div class="filter-bar" id="filter-bar" role="search">
+    <input type="search" id="search-input" placeholder="Search title or author…" autocomplete="off" aria-label="Search books">
+    <div class="filter-controls">
+      <select id="filter-language" aria-label="Filter by language">
+        <option value="">All languages</option>
+        <option value="en">English</option>
+        <option value="de">German</option>
+        <option value="ur">Urdu</option>
+        <option value="fr">French</option>
+      </select>
+      <select id="filter-rating" aria-label="Filter by rating">
+        <option value="">All ratings</option>
+        <option value="5">★★★★★ only</option>
+        <option value="4">★★★★+ up</option>
+        <option value="3">★★★+ up</option>
+        <option value="2">★★+ up</option>
+        <option value="1">★+ up</option>
+      </select>
+      <select id="sort-by" aria-label="Sort books">
+        <option value="dateAdded">Date added</option>
+        <option value="dateFinished">Date finished</option>
+        <option value="title">Title A–Z</option>
+        <option value="rating">Rating</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── Main Content ───────────────────────────────────────────────────── -->
+  <main id="main-content">
+    <div id="books-grid" class="books-grid" role="list"></div>
+    <div id="stats-view" class="stats-view hidden" aria-label="Reading statistics"></div>
+  </main>
+
+  <!-- ── FAB ────────────────────────────────────────────────────────────── -->
+  <button id="fab" class="fab" aria-label="Add a book">+</button>
+
+</div><!-- /#app -->
+
+
+<!-- ── Book Modal ──────────────────────────────────────────────────────── -->
+<div id="book-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-title">Add Book</h2>
+      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+    </div>
+
+    <form id="book-form" class="book-form" novalidate>
+      <input type="hidden" id="field-id">
+
+      <div class="form-group">
+        <label for="field-title">Title <span aria-hidden="true">*</span></label>
+        <input type="text" id="field-title" dir="auto" required autocomplete="off" placeholder="Book title">
+      </div>
+
+      <div class="form-group">
+        <label for="field-author">Author <span aria-hidden="true">*</span></label>
+        <input type="text" id="field-author" dir="auto" required autocomplete="off" placeholder="Author name">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="field-language">Language</label>
+          <select id="field-language">
+            <option value="en">English</option>
+            <option value="de">German</option>
+            <option value="ur">Urdu</option>
+            <option value="fr">French</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="field-format">Format</label>
+          <select id="field-format">
+            <option value="">—</option>
+            <option value="paperback">Paperback</option>
+            <option value="hardcover">Hardcover</option>
+            <option value="ebook">Ebook</option>
+            <option value="audiobook">Audiobook</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="field-shelf">Shelf</label>
+        <select id="field-shelf">
+          <option value="tbr">TBR (to be read)</option>
+          <option value="reading">Currently Reading</option>
+          <option value="read">Read</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="progress-group">
+        <label for="field-progress-value">Progress</label>
+        <div class="progress-input">
+          <select id="field-progress-type" aria-label="Progress unit">
+            <option value="percent">%</option>
+            <option value="page">pages</option>
+          </select>
+          <input type="number" id="field-progress-value" min="0" max="9999" step="1" placeholder="0" aria-label="Progress value">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Rating</label>
+        <div class="star-input" id="star-input" role="group" aria-label="Rating out of 5 stars"></div>
+        <input type="hidden" id="field-rating" value="0">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="field-date-started">Date started</label>
+          <input type="date" id="field-date-started">
+        </div>
+        <div class="form-group">
+          <label for="field-date-finished">Date finished</label>
+          <input type="date" id="field-date-finished">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="field-tags">Tags <span style="font-weight:400;color:var(--text3)">(comma-separated)</span></label>
+        <input type="text" id="field-tags" autocomplete="off" placeholder="fiction, classics, favourites">
+      </div>
+
+      <div class="form-group">
+        <label for="field-notes">Notes / Review</label>
+        <textarea id="field-notes" dir="auto" rows="4" placeholder="Your thoughts…"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" id="btn-delete" class="btn btn-danger hidden">Delete book</button>
+        <div>
+          <button type="button" id="btn-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="btn-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ── Finish-book Modal ───────────────────────────────────────────────── -->
+<div id="finish-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="finish-modal-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content modal-content--sm">
+    <div class="modal-header">
+      <h2 id="finish-modal-title">Mark as finished</h2>
+    </div>
+    <div class="finish-body">
+      <div class="form-group">
+        <label>Rating</label>
+        <div class="star-input" id="finish-star-input" role="group" aria-label="Rating out of 5 stars"></div>
+        <input type="hidden" id="finish-rating" value="0">
+      </div>
+      <div class="form-group" style="margin-top:0.9rem">
+        <label for="finish-date">Finish date</label>
+        <input type="date" id="finish-date" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:0.9rem;outline:none">
+      </div>
+      <div class="finish-actions">
+        <button id="btn-finish-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="btn-finish-confirm" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Settings Modal ─────────────────────────────────────────────────── -->
+<div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content modal-content--sm">
+    <div class="modal-header">
+      <h2 id="settings-modal-title">Settings</h2>
+      <button class="modal-close" id="settings-close" aria-label="Close">×</button>
+    </div>
+    <div class="settings-body">
+      <h3>Data backup</h3>
+      <p class="settings-hint">Export often — this is your only backup!</p>
+      <div class="settings-actions">
+        <button id="btn-export" class="btn btn-primary">⬇ Export JSON</button>
+        <button id="btn-import" class="btn btn-secondary">⬆ Import JSON</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" aria-hidden="true">
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Import-confirm Modal ───────────────────────────────────────────── -->
+<div id="import-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content modal-content--sm">
+    <div class="modal-header">
+      <h2 id="import-modal-title">Import books</h2>
+    </div>
+    <div class="import-body">
+      <p>Found <strong id="import-count">0</strong> books in the file. What should we do?</p>
+      <div class="import-actions">
+        <button id="btn-import-merge"   class="btn btn-primary">Merge with existing</button>
+        <button id="btn-import-replace" class="btn btn-danger">Replace all my books</button>
+        <button id="btn-import-cancel"  class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
