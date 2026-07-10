@@ -33,7 +33,9 @@ function parseDoc(doc) {
     author: (doc.author_name || []).join(', '),
     language: LANG_MAP[lang] || 'en',
     thumbnail: cover,
-    tags: (doc.subject || []).slice(0, 5).join(', '),
+    tags: (doc.subject || [])
+      .filter(s => !/^(form|genre|place|time|person|subject):/i.test(s) && s.length < 40)
+      .slice(0, 5).join(', '),
     description: '',          // OL search doesn't return description; blank is fine
     pageCount: doc.number_of_pages_median || null,
     publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : null,
