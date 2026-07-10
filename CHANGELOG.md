@@ -1,0 +1,111 @@
+# Changelog
+
+All notable changes to Prose & Spine are documented here.
+
+---
+
+## [v8] — 2026-07-10
+
+### Changed
+- Book cover thumbnails now display the full cover image with no cropping
+- Card cover area uses a 2:3 portrait aspect ratio (standard book proportions)
+- Switched from `object-fit: cover` to `object-fit: contain` so the entire cover is always visible
+
+---
+
+## [v7] — 2026-07-10
+
+### Changed
+- Tapping anywhere on a book card now opens the edit modal (previously required tapping a tiny ✎ pencil icon)
+- Action buttons (Mark as finished / Start reading) still work independently without triggering edit
+- Keyboard accessible: Enter/Space on a focused card opens edit
+- Version badge redesigned as a gold pill next to the app title — clearly visible on all devices
+- Staging banner updated to always reflect the current version number
+
+### Removed
+- Small ✎ edit button on cards (replaced by full-card tap)
+
+---
+
+## [v6] — 2026-07-10
+
+### Fixed
+- **Delete book broken on iOS PWA** — `window.confirm()` is silently blocked in iOS standalone PWA mode, so the delete flow always exited early without deleting anything. Replaced with a proper "Delete book?" confirmation modal matching the style of existing modals.
+
+---
+
+## [v5] — 2026-07-10
+
+### Fixed
+- **`">` raw HTML appearing below book covers** — the inline `onerror` handler on cover images used escaped double quotes (`\"`) which the HTML parser interpreted as ending the attribute early, leaking `">` as visible text. Fixed by removing the inline handler entirely and attaching image error listeners after render using a `data-initial` attribute.
+- **Dirty Open Library tags** — subjects prefixed with `form:`, `genre:`, `place:`, `time:`, `person:` were showing raw on book cards. Now filtered out before saving.
+- **Header title clipped on notched iPhones** — added `padding-left: max(1rem, env(safe-area-inset-left))` to the header and filter bar to respect the iOS safe area with `viewport-fit=cover`.
+
+### Added
+- App version number displayed permanently in the header (small badge next to the title)
+
+---
+
+## [v4] — 2026-07-10
+
+### Added
+- `_headers` file for Cloudflare Pages: sets `Cache-Control: no-cache, no-store` on `index.html` and `sw.js`, and `no-cache` on all JS/CSS files, preventing the CDN from serving stale assets after a deploy
+- Inline version-check script in `index.html`: on each page load, compares a hardcoded version string against `localStorage`. On mismatch, unregisters all service workers, clears all caches, and hard-reloads to guarantee fresh code is loaded
+
+### Changed
+- Service worker cache bumped to `proseandspine-v3` (network-first strategy from previous release)
+
+---
+
+## [v3] — 2026-07-10
+
+### Changed
+- **Service worker strategy changed from cache-first to network-first** — always fetches fresh files from the network and falls back to cache only when offline. Eliminates the stale-code problem where users kept running old JS/CSS after a deploy.
+- Bumped SW cache name to `proseandspine-v3` to evict old caches on activation
+
+---
+
+## Book search rewrite — 2026-07-10
+
+### Changed
+- **Switched from Google Books API to Open Library API** — Google Books shared quota was exhausted (429 errors), causing silent empty results. Open Library is free, requires no API key, and has no quota.
+- Cover images now served from `covers.openlibrary.org`
+- Replaced `AbortSignal.timeout()` with `AbortController` + manual `setTimeout` for fetch timeouts — `AbortSignal.timeout()` is unsupported on iOS Safari < 16 and threw a silent TypeError.
+
+---
+
+## Staging environment — 2026-07-10
+
+### Added
+- Amber "⚠ STAGING" banner fixed to the top of the screen in the staging branch — always visible so it's impossible to confuse staging with production
+- Two permanent Cloudflare Pages environments: staging (tracks `staging` branch) and production (tracks `main` branch)
+- Feature branch workflow established: `feature/*` → `staging` → validate → `main`
+
+---
+
+## AI book lookup & cover thumbnails — 2026-07-10
+
+### Added
+- **Quick-search panel** in the Add Book modal — type a title or author to search Open Library and auto-fill all book fields (title, author, language, tags, page count, publish year, ISBN)
+- **Book cover thumbnails** — displayed as a full-width strip at the top of each book card, with an initial-letter placeholder when no cover is available
+- **ISBN barcode scanning** via `BarcodeDetector` API (Chrome/Android only; hidden on unsupported devices)
+- **"Add title only" fallback** — if search returns no results, tap to open the full form with just the typed title pre-filled
+- Book preview header inside the form showing the selected cover and title before saving
+- "Search again" link to return to the search panel without losing the form
+
+---
+
+## [v1] — Initial release — 2026-07-10
+
+### Added
+- Three shelves: Currently Reading, TBR, Read — books moveable between shelves
+- Book fields: title, author, language (English / German / Urdu / French), format, shelf, progress, half-star rating (1–5 in 0.5 steps), date started, date finished, tags, notes
+- Filter bar: search by title/author, filter by language, filter by minimum rating, sort by date added / date finished / title / rating
+- Reading stats view: total books per shelf, books read this year, average rating, language bar chart, recent reads list
+- Export library to JSON / Import JSON (merge or replace)
+- Full Urdu/RTL support: `dir="auto"` on all text fields, Noto Nastaliq Urdu font auto-applied via Unicode range detection (`/[؀-ۿ]/`), Arabic script also mapped to Urdu slot
+- IndexedDB persistence via a custom async wrapper (`js/db.js`)
+- PWA: `manifest.json`, service worker with cache-first offline support, iOS installable (`apple-mobile-web-app-capable`, `apple-touch-icon`), `theme-color` for status bar
+- Warm paper aesthetic with full dark mode (follows system preference)
+- Mobile-first responsive layout; two-column grid on tablet/desktop
+- Deployable on Cloudflare Pages with no build step
