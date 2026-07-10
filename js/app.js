@@ -141,6 +141,16 @@ function renderBooks() {
   }
 
   grid.innerHTML = list.map(book => bookCardHTML(book)).join('');
+  bindThumbErrors(grid);
+}
+
+function bindThumbErrors(container) {
+  container.querySelectorAll('.card-thumb-img').forEach(img => {
+    img.addEventListener('error', () => {
+      const initial = img.dataset.initial || '?';
+      img.parentElement.innerHTML = `<div class="card-thumb-placeholder">${initial}</div>`;
+    }, { once: true });
+  });
 }
 
 function bookCardHTML(book) {
@@ -156,8 +166,7 @@ function bookCardHTML(book) {
   const thumbInitial = (book.title || '?')[0].toUpperCase();
   const thumbHTML = book.thumbnail
     ? `<div class="card-thumb-wrap">
-        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy"
-          onerror="this.parentElement.innerHTML='<div class=\\"card-thumb-placeholder\\">${thumbInitial}</div>'">
+        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy" data-initial="${escape(thumbInitial)}">
        </div>`
     : `<div class="card-thumb-wrap"><div class="card-thumb-placeholder">${thumbInitial}</div></div>`;
 
