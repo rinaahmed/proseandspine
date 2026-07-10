@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v10] — 2026-07-10
+
+### Fixed
+- **Stale cache reload broken** — `location.reload(true)` is a no-op in modern browsers (the force flag was removed from the spec), so iOS could still serve old cached content after the SW was cleared. Replaced with `location.replace('/?cb=VERSION')` — a cache-busting URL that guarantees a genuine network fetch since it doesn't match any cached entry. The `?cb=` param is checked on arrival so the clear loop only runs once.
+
+---
+
 ## [v9] — 2026-07-10
 
 ### Fixed
