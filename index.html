@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v9
+    ⚠ STAGING &nbsp;·&nbsp; v10
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v9</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v10</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
     </div>
 
@@ -323,7 +323,9 @@
 
 <script>
 (async () => {
-  const V = '8';
+  const V = '10';
+  // Strip any previous cache-bust param so we compare clean versions
+  if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);
   if ('serviceWorker' in navigator) {
@@ -336,9 +338,11 @@
         ...regs.map(r => r.unregister()),
         ...keys.map(k => caches.delete(k))
       ]);
-      location.reload(true);
     } catch (e) { /* ignore */ }
   }
+  // Cache-busting URL forces a genuine network fetch, bypassing any
+  // remaining HTTP cache or SW intercept after unregister
+  location.replace(location.pathname + '?cb=' + V);
 })();
 </script>
 <script type="module" src="/js/app.js"></script>
