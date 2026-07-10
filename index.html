@@ -303,6 +303,26 @@
 </div>
 
 
+<script>
+(async () => {
+  const V = '4';
+  if (localStorage.getItem('app-version') === V) return;
+  localStorage.setItem('app-version', V);
+  if ('serviceWorker' in navigator) {
+    try {
+      const [regs, keys] = await Promise.all([
+        navigator.serviceWorker.getRegistrations(),
+        caches.keys()
+      ]);
+      await Promise.all([
+        ...regs.map(r => r.unregister()),
+        ...keys.map(k => caches.delete(k))
+      ]);
+      location.reload(true);
+    } catch (e) { /* ignore */ }
+  }
+})();
+</script>
 <script type="module" src="/js/app.js"></script>
 <!-- books-api.js is imported as a module by app.js -->
 </body>
