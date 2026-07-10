@@ -1,4 +1,5 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks } from './db.js';
+import { searchBooks, lookupISBN, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,16 @@ function renderBooks() {
   }
 
   grid.innerHTML = list.map(book => bookCardHTML(book)).join('');
+  bindThumbErrors(grid);
+}
+
+function bindThumbErrors(container) {
+  container.querySelectorAll('.card-thumb-img').forEach(img => {
+    img.addEventListener('error', () => {
+      const initial = img.dataset.initial || '?';
+      img.parentElement.innerHTML = `<div class="card-thumb-placeholder">${initial}</div>`;
+    }, { once: true });
+  });
 }
 
 function bookCardHTML(book) {
@@ -150,6 +161,14 @@ function bookCardHTML(book) {
   const authorDir = hasArabicScript(book.author) ? 'rtl' : 'auto';
 
   const tags = (book.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+  // Thumbnail
+  const thumbInitial = (book.title || '?')[0].toUpperCase();
+  const thumbHTML = book.thumbnail
+    ? `<div class="card-thumb-wrap">
+        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy" data-initial="${escape(thumbInitial)}">
+       </div>`
+    : `<div class="card-thumb-wrap"><div class="card-thumb-placeholder">${thumbInitial}</div></div>`;
 
   let progressHTML = '';
   if (book.shelf === 'reading' && book.progress && book.progress.value) {
@@ -179,6 +198,7 @@ function bookCardHTML(book) {
 
   return `
     <article class="book-card" data-id="${book.id}">
+      ${thumbHTML}
       <div class="card-body">
         <div class="card-header">
           <h3 class="book-title ${titleClass}" dir="${titleDir}">${escape(book.title)}</h3>
@@ -331,31 +351,50 @@ function buildStarInput(containerId, hiddenInputId) {
   return { setVal };
 }
 
-// ─── Book Modal ───────────────────────────────────────────────────────────────
+// ─── Quick-search logic ───────────────────────────────────────────────────────
 
-let starInputMain = null;
+let _searchDebounce = null;
+let _cameraStream = null;
+let _barcodeInterval = null;
 
-function openBookModal(book = null) {
-  const modal = document.getElementById('book-modal');
-  const form = document.getElementById('book-form');
-  const title = document.getElementById('modal-title');
-  const deleteBtn = document.getElementById('btn-delete');
+function showQSPanel() {
+  document.getElementById('quick-search-panel').classList.remove('hidden');
+  document.getElementById('book-form').classList.add('hidden');
+  document.getElementById('qs-input').value = '';
+  const resultsList = document.getElementById('qs-results');
+  resultsList.classList.add('hidden');
+  resultsList.innerHTML = '';
+  resultsList._data = [];
+  document.getElementById('qs-spinner').classList.add('hidden');
+  document.getElementById('qs-scan-btn').classList.toggle('hidden', !isBarcodeSupported());
+  setTimeout(() => document.getElementById('qs-input').focus(), 80);
+}
 
-  title.textContent = book ? 'Edit Book' : 'Add Book';
-  form.reset();
-  document.getElementById('field-id').value = book ? book.id : '';
-  document.getElementById('field-title').value = book ? (book.title || '') : '';
-  document.getElementById('field-author').value = book ? (book.author || '') : '';
-  document.getElementById('field-language').value = book ? (book.language || 'en') : 'en';
-  document.getElementById('field-format').value = book ? (book.format || '') : '';
-  document.getElementById('field-shelf').value = book ? (book.shelf || state.shelf) : state.shelf;
-  document.getElementById('field-rating').value = book ? (book.rating || 0) : 0;
-  document.getElementById('field-date-started').value = book ? (book.dateStarted || '') : '';
-  document.getElementById('field-date-finished').value = book ? (book.dateFinished || '') : '';
-  document.getElementById('field-tags').value = book ? (book.tags || '') : '';
-  document.getElementById('field-notes').value = book ? (book.notes || '') : '';
+function showFormPanel(book = null) {
+  document.getElementById('quick-search-panel').classList.add('hidden');
+  document.getElementById('book-form').classList.remove('hidden');
+  stopCamera();
+  fillFormFromBook(book || {});
+  setTimeout(() => document.getElementById('field-title').focus(), 80);
+}
 
-  if (book && book.progress) {
+function fillFormFromBook(book) {
+  document.getElementById('book-form').reset();
+  document.getElementById('field-id').value = book.id || '';
+  document.getElementById('field-thumbnail').value = book.thumbnail || '';
+  document.getElementById('field-open-lib-key').value = book.openLibKey || '';
+  document.getElementById('field-title').value = book.title || '';
+  document.getElementById('field-author').value = book.author || '';
+  document.getElementById('field-language').value = book.language || 'en';
+  document.getElementById('field-format').value = book.format || '';
+  document.getElementById('field-shelf').value = book.shelf || state.shelf;
+  document.getElementById('field-rating').value = book.rating || 0;
+  document.getElementById('field-date-started').value = book.dateStarted || '';
+  document.getElementById('field-date-finished').value = book.dateFinished || '';
+  document.getElementById('field-tags').value = book.tags || '';
+  document.getElementById('field-notes').value = book.description || book.notes || '';
+
+  if (book.progress) {
     document.getElementById('field-progress-type').value = book.progress.type || 'percent';
     document.getElementById('field-progress-value').value = book.progress.value || '';
   } else {
@@ -363,20 +402,145 @@ function openBookModal(book = null) {
     document.getElementById('field-progress-value').value = '';
   }
 
-  deleteBtn.classList.toggle('hidden', !book);
-
   updateProgressVisibility();
+  if (!starInputMain) starInputMain = buildStarInput('star-input', 'field-rating');
+  starInputMain.setVal(book.rating || 0);
 
-  if (!starInputMain) {
-    starInputMain = buildStarInput('star-input', 'field-rating');
+  // Preview header — show when we have a search-picked book with title
+  const fromSearch = !!(book.openLibKey && book.title);
+  const previewHeader = document.getElementById('book-preview-header');
+  previewHeader.classList.toggle('hidden', !fromSearch);
+  if (fromSearch) {
+    document.getElementById('preview-title-text').textContent = book.title;
+    document.getElementById('preview-author-text').textContent = book.author || '';
+    const thumb = document.getElementById('preview-thumb');
+    if (book.thumbnail) { thumb.src = book.thumbnail; thumb.style.display = ''; }
+    else { thumb.style.display = 'none'; }
   }
-  starInputMain.setVal(book ? (book.rating || 0) : 0);
 
-  modal.classList.remove('hidden');
-  document.getElementById('field-title').focus();
+  document.getElementById('btn-delete').classList.toggle('hidden', !book.id);
+}
+
+function onQSInput() {
+  clearTimeout(_searchDebounce);
+  const q = document.getElementById('qs-input').value.trim();
+  const resultsList = document.getElementById('qs-results');
+  const spinner = document.getElementById('qs-spinner');
+
+  if (!q) {
+    resultsList.classList.add('hidden');
+    spinner.classList.add('hidden');
+    return;
+  }
+
+  spinner.classList.remove('hidden');
+  resultsList.classList.add('hidden');
+
+  _searchDebounce = setTimeout(async () => {
+    const { results, error } = await searchBooks(q);
+    spinner.classList.add('hidden');
+    if (error) {
+      resultsList.innerHTML = `<li class="qs-result-message qs-error">${error}</li>`;
+      resultsList.classList.remove('hidden');
+    } else {
+      renderQSResults(results, q);
+    }
+  }, 400);
+}
+
+function renderQSResults(books, query) {
+  const resultsList = document.getElementById('qs-results');
+  resultsList._data = books;
+
+  if (!books.length) {
+    resultsList.innerHTML = `<li class="qs-result-message">No results for "<strong>${escape(query)}</strong>" — tap <em>Add title only</em> below.</li>`;
+    resultsList.classList.remove('hidden');
+    return;
+  }
+
+  resultsList.innerHTML = books.map((b, i) => {
+    const year = (b.publishedDate || '').slice(0, 4);
+    const thumbEl = b.thumbnail
+      ? `<img class="qs-result-thumb" src="${escape(b.thumbnail)}" alt="" loading="lazy">`
+      : `<div class="qs-result-thumb-placeholder">📖</div>`;
+    return `<li class="qs-result-item" role="option" tabindex="0" data-index="${i}">
+      ${thumbEl}
+      <div class="qs-result-info">
+        <div class="qs-result-title" dir="auto">${escape(b.title)}</div>
+        <div class="qs-result-author" dir="auto">${escape(b.author)}</div>
+        ${year ? `<div class="qs-result-year">${year}</div>` : ''}
+      </div>
+    </li>`;
+  }).join('');
+
+  resultsList.classList.remove('hidden');
+}
+
+function onQSResultClick(e) {
+  const item = e.target.closest('.qs-result-item');
+  if (!item) return;
+  const resultsList = document.getElementById('qs-results');
+  const book = (resultsList._data || [])[parseInt(item.dataset.index)];
+  if (!book) return;
+  showFormPanel(book);
+}
+
+function onQSResultKeydown(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    onQSResultClick({ target: e.target });
+  }
+}
+
+// ─── Camera / barcode ─────────────────────────────────────────────────────────
+
+async function startCamera() {
+  const wrap = document.getElementById('qs-camera-wrap');
+  const video = document.getElementById('qs-video');
+  wrap.classList.remove('hidden');
+  try {
+    _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = _cameraStream;
+    await video.play();
+    _barcodeInterval = setInterval(async () => {
+      const code = await detectBarcodeFromVideoFrame(video);
+      if (!code) return;
+      stopCamera();
+      document.getElementById('qs-spinner').classList.remove('hidden');
+      const book = await lookupISBN(code);
+      document.getElementById('qs-spinner').classList.add('hidden');
+      if (book) { showFormPanel(book); }
+      else { document.getElementById('qs-input').value = code; onQSInput(); }
+    }, 600);
+  } catch {
+    wrap.classList.add('hidden');
+    alert('Camera access denied or not available.');
+  }
+}
+
+function stopCamera() {
+  clearInterval(_barcodeInterval);
+  _barcodeInterval = null;
+  if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
+  document.getElementById('qs-camera-wrap').classList.add('hidden');
+}
+
+// ─── Book Modal ───────────────────────────────────────────────────────────────
+
+let starInputMain = null;
+
+function openBookModal(book = null) {
+  document.getElementById('modal-title').textContent = book ? 'Edit Book' : 'Add Book';
+  if (book) {
+    showFormPanel(book);
+  } else {
+    showQSPanel();
+  }
+  document.getElementById('book-modal').classList.remove('hidden');
 }
 
 function closeBookModal() {
+  stopCamera();
   document.getElementById('book-modal').classList.add('hidden');
 }
 
@@ -402,6 +566,8 @@ async function handleBookSubmit(e) {
     dateFinished: document.getElementById('field-date-finished').value || null,
     tags: document.getElementById('field-tags').value.trim(),
     notes: document.getElementById('field-notes').value.trim(),
+    thumbnail: document.getElementById('field-thumbnail').value || null,
+    openLibKey: document.getElementById('field-open-lib-key').value || null,
     progress: shelf === 'reading' && progressValue
       ? { type: document.getElementById('field-progress-type').value, value: parseFloat(progressValue) }
       : null,
@@ -562,6 +728,21 @@ function bindEvents() {
   document.getElementById('book-modal').querySelector('.modal-overlay').addEventListener('click', closeBookModal);
   document.getElementById('book-form').addEventListener('submit', handleBookSubmit);
   document.getElementById('field-shelf').addEventListener('change', updateProgressVisibility);
+
+  // Quick-search panel
+  document.getElementById('qs-input').addEventListener('input', onQSInput);
+  document.getElementById('qs-results').addEventListener('click', onQSResultClick);
+  document.getElementById('qs-results').addEventListener('keydown', onQSResultKeydown);
+  document.getElementById('qs-manual-btn').addEventListener('click', () => {
+    // Pre-fill title from whatever they typed, then open form
+    const typed = document.getElementById('qs-input').value.trim();
+    showFormPanel({ title: typed, shelf: state.shelf });
+  });
+  document.getElementById('btn-change-book').addEventListener('click', () => {
+    showQSPanel();
+  });
+  document.getElementById('qs-scan-btn').addEventListener('click', startCamera);
+  document.getElementById('qs-camera-close').addEventListener('click', stopCamera);
 
   document.getElementById('btn-delete').addEventListener('click', async () => {
     const id = parseInt(document.getElementById('field-id').value);
