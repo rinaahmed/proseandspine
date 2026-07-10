@@ -27,7 +27,7 @@
 <div id="app">
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
-  <div id="staging-banner" class="staging-banner hidden" aria-label="Staging environment">
+  <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
     ⚠ STAGING
   </div>
 
@@ -295,11 +295,6 @@
 </div>
 
 
-<script>
-  if (location.hostname.includes('staging')) {
-    document.getElementById('staging-banner').classList.remove('hidden');
-  }
-</script>
 <script type="module" src="/js/app.js"></script>
 <!-- books-api.js is imported as a module by app.js -->
 </body>
