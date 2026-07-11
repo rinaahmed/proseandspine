@@ -4,6 +4,14 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.0] — 2026-07-11
+
+### Changed
+- **Stats page redesigned as a reading report** (#13). New layout: a bold hero number (books finished in the selected year) with library / avg-rating / reading-now beneath it, a **"Your years"** bar chart, a **monthly reading rhythm**, a **formats donut**, **languages** bars, and **top tags**.
+- **Year-over-year drill-in** — tap any year (chip or bar) to scope the whole report to that year; "All time" shows the full picture. The "Your years" chart lets you compare years at a glance.
+
+---
+
 ## [v31.0] — 2026-07-11
 
 ### Added
