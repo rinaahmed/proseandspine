@@ -18,21 +18,25 @@ const LANG_MAP = {
   ara: 'ur',
 };
 
-// Ask the Cloudflare Worker (Claude + web search) for a cover image URL
-async function fetchCoverViaWorker(title, author) {
+// Ask the Cloudflare Worker (Claude + web search) for the book's ISBN
+async function fetchIsbnViaWorker(title, author) {
   if (!COVER_WORKER_URL) return null;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 20000);
   try {
     const res = await fetch(COVER_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, author }),
-      signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined,
+      signal: ctrl.signal,
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return data.coverUrl || null;
+    return data.isbn || null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(t);
   }
 }
 
@@ -157,19 +161,17 @@ export async function lookupISBN(isbn) {
   return null;
 }
 
-// Fetch the best cover for a book: Claude web search → Google Books → Open Library
+// Fetch the best cover: Claude finds ISBN → Google Books thumbnail → GB title search fallback
 export async function fetchCoverForBook({ title, author, isbn }) {
-  // 1. Claude web search via Worker (internet-wide search, most current)
-  const workerCover = await fetchCoverViaWorker(title, author);
-  if (workerCover) return workerCover;
-
-  // 2. Google Books by ISBN
-  if (isbn) {
-    const book = await lookupISBN(isbn);
+  // 1. Claude web search finds the ISBN, then we get the Google Books thumbnail for it
+  const workerIsbn = await fetchIsbnViaWorker(title, author);
+  const isbnToUse = workerIsbn || isbn;
+  if (isbnToUse) {
+    const book = await lookupISBN(isbnToUse);
     if (book?.thumbnail) return book.thumbnail;
   }
 
-  // 3. Google Books by title/author search
+  // 2. Fallback: Google Books title/author search
   if (title) {
     const { results } = await searchBooks(`${title} ${author || ''}`.trim(), 1);
     if (results[0]?.thumbnail) return results[0].thumbnail;

@@ -88,11 +88,8 @@ export default {
 
     try {
       const isbn = await findISBN(title, author, apiKey);
-      if (!isbn) return json({ coverUrl: null });
-
-      // Construct a reliable Open Library cover URL from the ISBN
-      const coverUrl = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
-      return json({ coverUrl, isbn });
+      // Return the ISBN — the client will use it to get a Google Books thumbnail
+      return json({ isbn: isbn || null });
     } catch (e) {
       console.error('cover-finder error:', e.message);
       return json({ error: e.message }, 500);

@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v20] — 2026-07-11
+
+### Changed
+- **Cover refresh now uses Google Books thumbnails** — Claude web search finds the ISBN, then Google Books API returns the cover. Google Books has current, high-quality covers and allows hotlinking. Open Library is no longer used for cover refresh.
+
+---
+
 ## [v19] — 2026-07-11
 
 ### Fixed
