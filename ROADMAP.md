@@ -20,7 +20,6 @@ _Nothing queued — pull from the backlog below._
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- **Redesign the Stats page** — current stats view is flat and unpolished; needs a cohesive dashboard-style redesign matching the app's design system, better visualisations, and possibly new stats (per-month reading, rating distribution, top authors, format breakdown). #13
 - **Audible library import** _(undecided — may or may not build)_ — import audiobook titles from Audible via a selective checklist (untick a child's/private titles); no official API, needs a workaround source. Depends on multi-format (now shipped). #8
 
 ---
@@ -33,6 +32,7 @@ _None open._
 
 ## Shipped
 
+- ✅ **Redesign the Stats page** — #13 — shipped in **v32.0**. Reading-report layout: hero number, "Your years" chart, monthly rhythm, formats donut, languages, top tags, with year-over-year drill-in.
 - ✅ **Multi-format support: Kindle / Paper / Audio** — #7 — shipped in **v31.0**. A book can hold several formats at once; multi-select toggle in the form, a badge per format on cards, one-time migration of the old `format` field.
 - ✅ **Show full cover in list (no side cropping)** — #12 — shipped in **v30.1**. Card thumbnails use `object-fit: contain` with a neutral letterbox backdrop.
 - ✅ **On-demand cover picker (Google vs. Claude), add & edit** — #9 — shipped in **v30**. "Find cover with Claude" button in the book form; compare and choose, fall back to the current cover anytime; works per-book when editing.

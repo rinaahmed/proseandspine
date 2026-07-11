@@ -43,7 +43,13 @@ const state = {
   books: [],
   pendingFinishId: null,
   pendingImport: null,
+  statsYear: null, // null = default (current year); otherwise a 'YYYY' string or 'all'
 };
+
+// Chart series colours (match the cover palette)
+const SERIES = ['#2A4B8D', '#3F6CB0', '#1C7C6B', '#6B4C9A', '#C24D6C', '#2E7D8A'];
+const FORMAT_COLOR = { kindle: '#2A4B8D', audio: '#1C7C6B', paper: '#6B4C9A' };
+const MONTH_INITIALS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -230,85 +236,182 @@ function bookCardHTML(book) {
 
 // ─── Rendering: Stats ─────────────────────────────────────────────────────────
 
+const yearOf = b => (b.dateFinished || '').slice(0, 4);
+
 function renderStats() {
   const view = document.getElementById('stats-view');
   const books = state.books;
   const readBooks = books.filter(b => b.shelf === 'read');
-  const thisYear = new Date().getFullYear();
-  const readThisYear = readBooks.filter(b => (b.dateFinished || '').startsWith(String(thisYear)));
+  const readingNow = books.filter(b => b.shelf === 'reading').length;
+  const thisYear = String(new Date().getFullYear());
 
-  const rated = readBooks.filter(b => b.rating);
-  const avgRating = rated.length
-    ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1)
-    : '—';
+  // Books finished per year (only those with a finish date)
+  const byYear = {};
+  for (const b of readBooks) {
+    const y = yearOf(b);
+    if (/^\d{4}$/.test(y)) byYear[y] = (byYear[y] || 0) + 1;
+  }
+  const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+
+  if (!readBooks.length) {
+    view.innerHTML = `
+      <div class="stats-wrap">
+        <div class="stats-empty">
+          <p class="stats-empty-msg">No finished books yet.</p>
+          <p class="stats-empty-hint">Mark books as read and your reading report will appear here.</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Selected scope: a specific year or 'all'
+  const defaultYear = byYear[thisYear] ? thisYear : (years[0] || 'all');
+  const selected = state.statsYear || defaultYear;
+  const scope = selected === 'all' ? readBooks : readBooks.filter(b => yearOf(b) === selected);
+
+  // Averages / breakdowns within the selected scope
+  const rated = scope.filter(b => b.rating);
+  const avgRating = rated.length ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1) : '—';
+
+  const byFormat = {};
+  for (const b of scope) for (const f of bookFormats(b)) byFormat[f] = (byFormat[f] || 0) + 1;
 
   const byLang = {};
-  for (const b of readBooks) {
-    const l = b.language || 'unknown';
-    byLang[l] = (byLang[l] || 0) + 1;
+  for (const b of scope) { const l = b.language || 'unknown'; byLang[l] = (byLang[l] || 0) + 1; }
+
+  const byTag = {};
+  for (const b of scope) {
+    for (const t of (b.tags || '').split(',').map(s => s.trim()).filter(Boolean)) {
+      byTag[t] = (byTag[t] || 0) + 1;
+    }
   }
-  const maxLang = Math.max(1, ...Object.values(byLang));
 
-  const langBars = Object.entries(byLang)
-    .sort((a, b) => b[1] - a[1])
-    .map(([code, count]) => `
-      <div class="lang-bar-row">
-        <span class="lang-bar-label">${langLabel(code)}</span>
-        <div class="lang-bar-track">
-          <div class="lang-bar-fill" style="width:${(count / maxLang * 100).toFixed(1)}%"></div>
+  // ── Hero ──
+  const heroCap = selected === 'all'
+    ? 'books read across your whole library.'
+    : `books finished in ${selected}.`;
+  const hero = `
+    <div class="st-hero">
+      <div class="st-hero-num tnum">${scope.length}</div>
+      <div class="st-hero-cap">${heroCap}</div>
+      <div class="st-hero-sub">
+        <div><span>Library</span><b class="tnum">${books.length}</b></div>
+        <div><span>Avg rating</span><b class="tnum">${avgRating}${avgRating !== '—' ? '★' : ''}</b></div>
+        <div><span>Reading now</span><b class="tnum">${readingNow}</b></div>
+      </div>
+    </div>`;
+
+  // ── Year selector chips ──
+  const yearChips = `
+    <div class="st-years-chips">
+      ${years.map(y => `<button class="st-chip ${y === selected ? 'on' : ''}" data-year="${y}">${y}</button>`).join('')}
+      <button class="st-chip ${selected === 'all' ? 'on' : ''}" data-year="all">All time</button>
+    </div>`;
+
+  // ── Your years bar chart (year-over-year) ──
+  const maxYear = Math.max(1, ...Object.values(byYear));
+  const yearsBars = `
+    <div class="st-sec-title">Your years</div>
+    <div class="st-yearbars">
+      ${years.slice().sort((a, b) => a.localeCompare(b)).map(y => `
+        <button class="st-yearcol ${y === selected ? 'on' : ''}" data-year="${y}" aria-label="${y}: ${byYear[y]} books">
+          <span class="st-yearcol-v tnum">${byYear[y]}</span>
+          <span class="st-yearcol-bar" style="height:${(byYear[y] / maxYear * 100).toFixed(0)}%"></span>
+          <span class="st-yearcol-l">${y.slice(2)}</span>
+        </button>`).join('')}
+    </div>`;
+
+  // ── Monthly rhythm (only for a specific year) ──
+  let monthly = '';
+  if (selected !== 'all') {
+    const counts = new Array(12).fill(0);
+    for (const b of scope) {
+      const m = parseInt((b.dateFinished || '').slice(5, 7), 10);
+      if (m >= 1 && m <= 12) counts[m - 1]++;
+    }
+    const maxMonth = Math.max(1, ...counts);
+    monthly = `
+      <div class="st-sec-title">Reading rhythm · ${selected}</div>
+      <div class="st-months">
+        ${counts.map((c, i) => `
+          <div class="st-mo">
+            <span class="st-mo-v tnum">${c || ''}</span>
+            <span class="st-mo-bar" style="height:${(c / maxMonth * 100).toFixed(0)}%"></span>
+            <span class="st-mo-l">${MONTH_INITIALS[i]}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // ── Formats donut ──
+  let formats = '';
+  const fmtEntries = Object.entries(byFormat).sort((a, b) => b[1] - a[1]);
+  if (fmtEntries.length) {
+    const total = fmtEntries.reduce((s, [, c]) => s + c, 0);
+    let acc = 0;
+    const segs = fmtEntries.map(([k, c]) => {
+      const start = acc / total * 100;
+      acc += c;
+      const end = acc / total * 100;
+      return `${FORMAT_COLOR[k] || '#999'} ${start.toFixed(1)}% ${end.toFixed(1)}%`;
+    }).join(', ');
+    const legend = fmtEntries.map(([k, c]) => `
+      <div class="st-lg"><span class="st-sw" style="background:${FORMAT_COLOR[k] || '#999'}"></span>${FORMAT_LABEL[k] || k}<b class="tnum">${c}</b></div>`).join('');
+    formats = `
+      <div class="st-sec-title">How you read</div>
+      <div class="st-donut-row">
+        <div class="st-donut" style="background:conic-gradient(${segs})">
+          <div class="st-donut-mid"><b class="tnum">${total}</b><span>books</span></div>
         </div>
-        <span class="lang-bar-count">${count}</span>
-      </div>`).join('');
+        <div class="st-legend">${legend}</div>
+      </div>`;
+  }
 
-  const allShelves = [
-    { label: 'Read', count: readBooks.length },
-    { label: 'Reading', count: books.filter(b => b.shelf === 'reading').length },
-    { label: 'TBR', count: books.filter(b => b.shelf === 'tbr').length },
-  ];
+  // ── Languages ──
+  const langEntries = Object.entries(byLang).sort((a, b) => b[1] - a[1]);
+  const maxLang = Math.max(1, ...langEntries.map(([, c]) => c));
+  const languages = langEntries.length ? `
+    <div class="st-sec-title">Languages you read in</div>
+    <div class="st-hbars">
+      ${langEntries.map(([code, c], i) => `
+        <div class="st-hbar">
+          <span class="st-hl">${langLabel(code)}</span>
+          <div class="st-ht"><div class="st-hf" style="width:${(c / maxLang * 100).toFixed(0)}%;background:${SERIES[i % SERIES.length]}"></div></div>
+          <span class="st-hc tnum">${c}</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  // ── Top tags ──
+  const tagEntries = Object.entries(byTag).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const maxTag = Math.max(1, ...tagEntries.map(([, c]) => c));
+  const tags = tagEntries.length ? `
+    <div class="st-sec-title">What you gravitate to</div>
+    <div class="st-tagbars">
+      ${tagEntries.map(([t, c]) => `
+        <div class="st-tagbar">
+          <span class="st-tn ${textClass(t)}" dir="auto">${escape(t)}</span>
+          <div class="st-tt"><div class="st-tf" style="width:${(c / maxTag * 100).toFixed(0)}%"></div></div>
+          <span class="st-tc tnum">${c}</span>
+        </div>`).join('')}
+    </div>` : '';
 
   view.innerHTML = `
-    <div class="stats-container">
-      <h2 class="stats-heading">Your library</h2>
-
-      <div class="stat-cards">
-        ${allShelves.map(s => `
-          <div class="stat-card">
-            <div class="stat-num">${s.count}</div>
-            <div class="stat-label">${s.label}</div>
-          </div>`).join('')}
-        <div class="stat-card">
-          <div class="stat-num">${readThisYear.length}</div>
-          <div class="stat-label">Read in ${thisYear}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num">${avgRating}</div>
-          <div class="stat-label">Avg rating</div>
-        </div>
-      </div>
-
-      ${langBars ? `
-        <div class="stats-section">
-          <h3 class="stats-subheading">Books read by language</h3>
-          <div class="lang-bars">${langBars}</div>
-        </div>` : ''}
-
-      ${readBooks.length ? `
-        <div class="stats-section">
-          <h3 class="stats-subheading">Recent reads</h3>
-          <ul class="recent-reads">
-            ${readBooks
-              .filter(b => b.dateFinished)
-              .sort((a, b) => (b.dateFinished || '').localeCompare(a.dateFinished || ''))
-              .slice(0, 5)
-              .map(b => `<li>
-                <span class="rr-title ${textClass(b.title)}" dir="auto">${escape(b.title)}</span>
-                ${b.rating ? starsHTML(b.rating) : ''}
-                <span class="rr-date">${fmtDate(b.dateFinished)}</span>
-              </li>`)
-              .join('')}
-          </ul>
-        </div>` : ''}
+    <div class="stats-wrap">
+      ${hero}
+      ${years.length > 1 ? yearChips : ''}
+      ${years.length > 1 ? yearsBars : ''}
+      ${monthly}
+      ${formats}
+      ${languages}
+      ${tags}
     </div>`;
+
+  // Drill-in: tapping a year chip or bar scopes the report
+  view.querySelectorAll('[data-year]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.statsYear = el.dataset.year;
+      renderStats();
+    });
+  });
 }
 
 // ─── Star Input Widget ────────────────────────────────────────────────────────
