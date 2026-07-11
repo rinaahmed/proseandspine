@@ -30,7 +30,7 @@ per-book language field.
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- **Show full cover in list (no side cropping)** — card thumbnails currently use `object-fit: cover` and clip left/right; switch to `object-fit: contain` so the whole cover is visible (decide on the letterbox background). _(GitHub issue pending — create when GitHub is re-authorized.)_
+- **Show full cover in list (no side cropping)** — card thumbnails currently use `object-fit: cover` and clip left/right; switch to `object-fit: contain` so the whole cover is visible (decide on the letterbox background). #12
 
 ---
 
