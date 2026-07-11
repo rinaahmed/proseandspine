@@ -30,7 +30,8 @@ per-book language field.
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- **Pick cover at add-time (Google vs. Claude)** — on-demand "Find cover with Claude" button in the Add/Edit form; after Claude's cover loads, let the user compare and fall back to the Google cover if they prefer it. #9
+- **On-demand cover picker (Google vs. Claude), add & edit** — "Find cover with Claude" button in the Add/Edit form; after Claude's cover loads, compare and fall back to the Google cover if preferred. Works when editing a single existing book too. #9
+- **Track cover source to skip already-done books** — record which books already have a Claude cover so bulk "Refresh all covers" skips them (saves time/tokens); keep a separate "force re-fetch all" action. #10
 
 ---
 
