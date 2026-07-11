@@ -813,17 +813,17 @@ function bindEvents() {
   });
 
   // Fetch missing covers
-  document.getElementById('btn-fetch-covers').addEventListener('click', () => {
+  document.getElementById('btn-fetch-covers')?.addEventListener('click', () => {
     closeSettings();
     fetchMissingCovers(state.books, false);
   });
 
   // Refresh all covers (re-fetch even existing ones via Claude web search)
-  document.getElementById('btn-refresh-covers').addEventListener('click', () => {
+  document.getElementById('btn-refresh-covers')?.addEventListener('click', () => {
     closeSettings();
     fetchMissingCovers(state.books, true);
   });
-  document.getElementById('cover-fetch-stop').addEventListener('click', () => {
+  document.getElementById('cover-fetch-stop')?.addEventListener('click', () => {
     _coverFetchAbort = true;
     document.getElementById('cover-fetch-banner').classList.add('hidden');
   });
