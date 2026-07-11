@@ -13,6 +13,8 @@ const LANGUAGES = [
 
 const FORMATS = ['paperback', 'hardcover', 'ebook', 'audiobook'];
 
+const COVER_PALETTE = ['#2A4B8D', '#3F6CB0', '#1C7C6B', '#6B4C9A', '#C24D6C', '#2E7D8A'];
+
 const SHELF_LABELS = {
   reading: 'Currently Reading',
   tbr: 'To Be Read',
@@ -134,9 +136,16 @@ function renderBooks() {
     const e = EMPTY_STATES[state.shelf] || {};
     grid.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">${e.icon || '📚'}</div>
+        <div class="empty-illustration">
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+        </div>
         <p class="empty-msg">${e.msg || 'Nothing here yet.'}</p>
         <p class="empty-hint">${e.hint || ''}</p>
+        <button class="btn-primary" onclick="document.getElementById('fab').click()">Add a book</button>
       </div>`;
     return;
   }
@@ -149,7 +158,8 @@ function bindThumbErrors(container) {
   container.querySelectorAll('.card-thumb-img').forEach(img => {
     img.addEventListener('error', () => {
       const initial = img.dataset.initial || '?';
-      img.parentElement.innerHTML = `<div class="card-thumb-placeholder">${initial}</div>`;
+      const color = img.dataset.color || COVER_PALETTE[0];
+      img.parentElement.outerHTML = `<div class="card-thumb-wrap card-thumb-placeholder" style="background:${color}"><span class="card-thumb-initial">${initial}</span></div>`;
     }, { once: true });
   });
 }
@@ -165,11 +175,12 @@ function bookCardHTML(book) {
 
   // Thumbnail
   const thumbInitial = (book.title || '?')[0].toUpperCase();
+  const placeholderColor = COVER_PALETTE[(book.id || 0) % COVER_PALETTE.length];
   const thumbHTML = book.thumbnail
     ? `<div class="card-thumb-wrap">
-        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy" data-initial="${escape(thumbInitial)}">
+        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy" data-initial="${escape(thumbInitial)}" data-color="${placeholderColor}">
        </div>`
-    : `<div class="card-thumb-wrap"><div class="card-thumb-placeholder">${thumbInitial}</div></div>`;
+    : `<div class="card-thumb-wrap card-thumb-placeholder" style="background:${placeholderColor}"><span class="card-thumb-initial">${thumbInitial}</span></div>`;
 
   let progressHTML = '';
   if (book.shelf === 'reading' && book.progress && book.progress.value) {
@@ -194,7 +205,7 @@ function bookCardHTML(book) {
   if (book.shelf === 'tbr') {
     actionButtons = `<button class="card-action-btn" data-action="start" data-id="${book.id}">Start reading</button>`;
   } else if (book.shelf === 'reading') {
-    actionButtons = `<button class="card-action-btn primary" data-action="finish" data-id="${book.id}">Mark as finished</button>`;
+    actionButtons = `<button class="card-action-btn primary" data-action="finish" data-id="${book.id}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished</button>`;
   }
 
   return `
@@ -385,7 +396,11 @@ function fillFormFromBook(book) {
   document.getElementById('field-author').value = book.author || '';
   document.getElementById('field-language').value = book.language || 'en';
   document.getElementById('field-format').value = book.format || '';
-  document.getElementById('field-shelf').value = book.shelf || state.shelf;
+  const shelfVal = book.shelf || state.shelf;
+  document.getElementById('field-shelf').value = shelfVal;
+  document.querySelectorAll('.shelf-seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.segShelf === shelfVal);
+  });
   document.getElementById('field-rating').value = book.rating || 0;
   document.getElementById('field-date-started').value = book.dateStarted || '';
   document.getElementById('field-date-finished').value = book.dateFinished || '';
@@ -746,8 +761,16 @@ async function confirmGoodreadsImport(merge) {
 
 // ─── Data & Navigation ────────────────────────────────────────────────────────
 
+function updateShelfCounts() {
+  ['reading', 'tbr', 'read'].forEach(shelf => {
+    const el = document.getElementById('count-' + shelf);
+    if (el) el.textContent = state.books.filter(b => b.shelf === shelf).length;
+  });
+}
+
 async function refreshBooks() {
   state.books = await getAllBooks();
+  updateShelfCounts();
   renderBooks();
 }
 
@@ -823,7 +846,6 @@ function bindEvents() {
   document.getElementById('btn-cancel').addEventListener('click', closeBookModal);
   document.getElementById('book-modal').querySelector('.modal-overlay').addEventListener('click', closeBookModal);
   document.getElementById('book-form').addEventListener('submit', handleBookSubmit);
-  document.getElementById('field-shelf').addEventListener('change', updateProgressVisibility);
 
   // Quick-search panel
   document.getElementById('qs-input').addEventListener('input', onQSInput);
@@ -906,19 +928,23 @@ function bindEvents() {
     renderBooks();
   });
 
-  document.getElementById('filter-language').addEventListener('change', (e) => {
-    state.filterLanguage = e.target.value;
-    renderBooks();
-  });
-
-  document.getElementById('filter-rating').addEventListener('change', (e) => {
-    state.filterRating = e.target.value;
-    renderBooks();
-  });
-
   document.getElementById('sort-by').addEventListener('change', (e) => {
     state.sortBy = e.target.value;
+    const labels = { dateAdded: 'Recent', title: 'Title', rating: 'Rating', dateFinished: 'Finished' };
+    const labelEl = document.getElementById('sort-label');
+    if (labelEl) labelEl.textContent = labels[e.target.value] || 'Recent';
     renderBooks();
+  });
+
+  // Segmented shelf control in book form
+  document.querySelectorAll('.shelf-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.shelf-seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const hidden = document.getElementById('field-shelf');
+      hidden.value = btn.dataset.segShelf;
+      updateProgressVisibility();
+    });
   });
 
   // Close modals with Escape

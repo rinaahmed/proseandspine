@@ -7,8 +7,8 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#8B6914" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#C89A2E" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#2A4B8D" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#5B7EC9" media="(prefers-color-scheme: dark)">
 
   <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,56 +16,60 @@
   <meta name="apple-mobile-web-app-title" content="Prose &amp; Spine">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg">
 
-  <!-- Fonts (preconnect first, then actual load) -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Public+Sans:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <div id="app">
 
-  <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
+  <!-- ── Staging banner -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v14
+    ⚠ STAGING &nbsp;·&nbsp; v15
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v14</span></h1>
-      <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v15</span></h1>
+      <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
+        <!-- equalizer / filter icon -->
+        <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <line x1="2" y1="5"  x2="16" y2="5"/>
+          <line x1="2" y1="9"  x2="16" y2="9"/>
+          <line x1="2" y1="13" x2="16" y2="13"/>
+          <circle cx="12" cy="5"  r="1.8" fill="currentColor" stroke="none"/>
+          <circle cx="6"  cy="9"  r="1.8" fill="currentColor" stroke="none"/>
+          <circle cx="11" cy="13" r="1.8" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
     </div>
 
     <nav class="shelf-nav" role="tablist" aria-label="Shelves">
-      <button class="shelf-btn active" role="tab" aria-selected="true"  data-shelf="reading">Currently Reading</button>
-      <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="tbr">TBR</button>
-      <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="read">Read</button>
+      <button class="shelf-btn active" role="tab" aria-selected="true"  data-shelf="reading">Reading <span class="shelf-count" id="count-reading">0</span></button>
+      <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="tbr">TBR <span class="shelf-count" id="count-tbr">0</span></button>
+      <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="read">Read <span class="shelf-count" id="count-read">0</span></button>
       <button class="shelf-btn"        role="tab" aria-selected="false" data-shelf="stats">Stats</button>
     </nav>
 
-    <!-- ── Filter Bar (inside header so it sticks with it) ────────────── -->
+    <!-- ── Filter Bar ────────────────────────────────────────────────── -->
     <div class="filter-bar" id="filter-bar" role="search">
-      <input type="search" id="search-input" placeholder="Search title or author…" autocomplete="off" aria-label="Search books">
-      <div class="filter-controls">
-        <select id="filter-language" aria-label="Filter by language">
-          <option value="">All languages</option>
-          <option value="en">English</option>
-          <option value="de">German</option>
-          <option value="ur">Urdu</option>
-          <option value="fr">French</option>
-        </select>
-        <select id="filter-rating" aria-label="Filter by rating">
-          <option value="">All ratings</option>
-          <option value="5">★★★★★ only</option>
-          <option value="4">★★★★+ up</option>
-          <option value="3">★★★+ up</option>
-          <option value="2">★★+ up</option>
-          <option value="1">★+ up</option>
-        </select>
+      <div class="filter-search-wrap">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="13.5" y2="13.5"/>
+        </svg>
+        <input type="search" id="search-input" placeholder="Search library" autocomplete="off" aria-label="Search books">
+      </div>
+      <div class="filter-sort-wrap">
+        <span id="sort-label">Recent</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M2 3.5 L5 6.5 L8 3.5"/>
+        </svg>
         <select id="sort-by" aria-label="Sort books">
-          <option value="dateAdded">Date added</option>
+          <option value="dateAdded">Recently added</option>
           <option value="dateFinished">Date finished</option>
           <option value="title">Title A–Z</option>
           <option value="rating">Rating</option>
@@ -81,7 +85,11 @@
   </main>
 
   <!-- ── FAB ────────────────────────────────────────────────────────────── -->
-  <button id="fab" class="fab" aria-label="Add a book">+</button>
+  <button id="fab" class="fab" aria-label="Add a book">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  </button>
 
   <!-- ── Cover-fetch progress banner ──────────────────────────────────── -->
   <div id="cover-fetch-banner" class="cover-fetch-banner hidden" aria-live="polite">
@@ -98,13 +106,15 @@
   <div class="modal-content">
     <div class="modal-header">
       <h2 id="modal-title">Add Book</h2>
-      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+      <button class="modal-close" id="modal-close" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="2" y1="2" x2="11" y2="11"/><line x1="11" y1="2" x2="2" y2="11"/>
+        </svg>
+      </button>
     </div>
 
     <!-- Quick-search panel (new books only) -->
     <div id="quick-search-panel" class="quick-search-panel">
-
-      <!-- Search row -->
       <div class="qs-search-row">
         <div class="qs-input-wrap">
           <span class="qs-icon">🔍</span>
@@ -113,13 +123,13 @@
           <span id="qs-spinner" class="qs-spinner hidden" aria-hidden="true"></span>
         </div>
         <button type="button" id="qs-scan-btn" class="qs-scan-btn hidden"
-          aria-label="Scan barcode" title="Scan ISBN barcode">📷</button>
+          aria-label="Scan barcode" title="Scan ISBN barcode">
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2.5" y="4" width="13" height="10" rx="2"/><circle cx="9" cy="9" r="2.5"/>
+          </svg>
+        </button>
       </div>
-
-      <!-- Results list -->
       <ul id="qs-results" class="qs-results hidden" role="listbox" aria-label="Search results"></ul>
-
-      <!-- Camera -->
       <div id="qs-camera-wrap" class="qs-camera-wrap hidden">
         <video id="qs-video" autoplay playsinline muted></video>
         <div class="qs-camera-overlay">
@@ -128,8 +138,6 @@
         </div>
         <button type="button" id="qs-camera-close" class="btn btn-secondary qs-camera-close-btn">Cancel</button>
       </div>
-
-      <!-- Always-visible manual fallback -->
       <div class="qs-manual-row">
         <span class="qs-manual-hint">Can't find it?</span>
         <button type="button" id="qs-manual-btn" class="btn-link">Add title only →</button>
@@ -142,7 +150,6 @@
       <input type="hidden" id="field-thumbnail">
       <input type="hidden" id="field-open-lib-key">
 
-      <!-- Selected-book preview header -->
       <div id="book-preview-header" class="book-preview-header hidden">
         <img id="preview-thumb" class="preview-thumb" src="" alt="" loading="lazy">
         <div class="preview-meta">
@@ -153,13 +160,22 @@
       </div>
 
       <div class="form-group">
-        <label for="field-title">Title <span aria-hidden="true">*</span></label>
+        <label for="field-title">Title</label>
         <input type="text" id="field-title" dir="auto" required autocomplete="off" placeholder="Book title">
+      </div>
+      <div class="form-group">
+        <label for="field-author">Author</label>
+        <input type="text" id="field-author" dir="auto" required autocomplete="off" placeholder="Author name">
       </div>
 
       <div class="form-group">
-        <label for="field-author">Author <span aria-hidden="true">*</span></label>
-        <input type="text" id="field-author" dir="auto" required autocomplete="off" placeholder="Author name">
+        <label>Shelf</label>
+        <div class="shelf-seg">
+          <button type="button" class="shelf-seg-btn active" data-seg-shelf="tbr">TBR</button>
+          <button type="button" class="shelf-seg-btn" data-seg-shelf="reading">Reading</button>
+          <button type="button" class="shelf-seg-btn" data-seg-shelf="read">Read</button>
+        </div>
+        <input type="hidden" id="field-shelf" value="tbr">
       </div>
 
       <div class="form-row">
@@ -182,15 +198,6 @@
             <option value="audiobook">Audiobook</option>
           </select>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label for="field-shelf">Shelf</label>
-        <select id="field-shelf">
-          <option value="tbr">TBR (to be read)</option>
-          <option value="reading">Currently Reading</option>
-          <option value="read">Read</option>
-        </select>
       </div>
 
       <div class="form-group" id="progress-group">
@@ -232,10 +239,10 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" id="btn-delete" class="btn btn-danger hidden">Delete book</button>
+        <button type="button" id="btn-delete" class="btn btn-danger hidden">Delete</button>
         <div>
           <button type="button" id="btn-cancel" class="btn btn-secondary">Cancel</button>
-          <button type="submit" id="btn-save" class="btn btn-primary">Save</button>
+          <button type="submit" id="btn-save" class="btn btn-primary">Save book</button>
         </div>
       </div>
     </form>
@@ -251,59 +258,117 @@
       <h2 id="finish-modal-title">Mark as finished</h2>
     </div>
     <div class="finish-body">
-      <div class="form-group">
-        <label>Rating</label>
-        <div class="star-input" id="finish-star-input" role="group" aria-label="Rating out of 5 stars"></div>
+      <div class="form-group" style="text-align:center;padding:4px 0 8px">
+        <div class="star-input" id="finish-star-input" role="group" aria-label="Rating out of 5 stars" style="justify-content:center;font-size:2rem;gap:8px"></div>
         <input type="hidden" id="finish-rating" value="0">
       </div>
-      <div class="form-group" style="margin-top:0.9rem">
-        <label for="finish-date">Finish date</label>
-        <input type="date" id="finish-date" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:0.9rem;outline:none">
+      <div class="form-group" style="margin-top:0.75rem">
+        <label for="finish-date" style="font-size:0.78rem;font-weight:600;color:var(--text2)">Date finished</label>
+        <input type="date" id="finish-date" style="width:100%;padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:0.9rem;outline:none;margin-top:5px">
       </div>
-      <div class="finish-actions">
+      <div class="finish-actions" style="margin-top:1rem">
+        <button id="btn-finish-confirm" class="btn btn-primary">Mark as finished</button>
         <button id="btn-finish-cancel" class="btn btn-secondary">Cancel</button>
-        <button id="btn-finish-confirm" class="btn btn-primary">Save</button>
       </div>
     </div>
   </div>
 </div>
 
 
-<!-- ── Settings Modal ─────────────────────────────────────────────────── -->
-<div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+<!-- ── Settings Modal (full-page) ─────────────────────────────────────── -->
+<div id="settings-modal" class="modal modal--page hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
   <div class="modal-overlay" tabindex="-1"></div>
-  <div class="modal-content modal-content--sm">
+  <div class="modal-content">
     <div class="modal-header">
+      <button class="modal-back" id="settings-close" aria-label="Back">
+        <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 3.5 L5.5 9 L11 14.5"/>
+        </svg>
+      </button>
       <h2 id="settings-modal-title">Settings</h2>
-      <button class="modal-close" id="settings-close" aria-label="Close">×</button>
     </div>
     <div class="settings-body">
-      <h3>Goodreads</h3>
-      <p class="settings-hint">Export your library from Goodreads → My Books → Import/Export → Export Library, then import the CSV here.</p>
-      <div class="settings-actions">
-        <button id="btn-goodreads-import" class="btn btn-primary">📚 Import from Goodreads</button>
-        <input type="file" id="goodreads-file" accept=".csv" style="display:none" aria-hidden="true">
+
+      <div>
+        <div class="settings-group-label">Your library</div>
+        <div class="settings-group">
+          <button class="settings-row" id="btn-goodreads-import">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 2.5V11"/><path d="M5.5 7.5L9 11l3.5-3.5"/><path d="M3 13.5H15"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Import from Goodreads</span>
+              <span class="settings-row-sub">Upload your exported CSV</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
+          <input type="file" id="goodreads-file" accept=".csv" style="display:none" aria-hidden="true">
+
+          <button class="settings-row" id="btn-import">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="2.5" width="12" height="13" rx="2"/>
+                <path d="M6 6.5H12 M6 9.5H12 M6 12H10"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Import backup</span>
+              <span class="settings-row-sub">Restore from a saved JSON file</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
+          <input type="file" id="import-file" accept=".json" style="display:none" aria-hidden="true">
+
+          <button class="settings-row" id="btn-export">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11.5V3"/><path d="M5.5 6.5L9 3l3.5 3.5"/><path d="M3 13.5H15"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Export backup</span>
+              <span class="settings-row-sub">Download all books as JSON</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
+        </div>
       </div>
 
-      <h3 style="margin-top:1.25rem">Covers</h3>
-      <p class="settings-hint">Look up missing covers for all books using Open Library.</p>
-      <div class="settings-actions">
-        <button id="btn-fetch-covers" class="btn btn-secondary">🖼 Fetch missing covers</button>
+      <div>
+        <div class="settings-group-label">Covers</div>
+        <div class="settings-group">
+          <button class="settings-row" id="btn-fetch-covers">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="14" height="12" rx="2"/>
+                <circle cx="6.5" cy="7.5" r="1.5"/>
+                <path d="M2 12l3.5-3 3 3 2.5-2.5 5 4.5"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Fetch missing covers</span>
+              <span class="settings-row-sub">Look up covers on Open Library</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
+        </div>
       </div>
 
-      <h3 style="margin-top:1.25rem">Data backup</h3>
-      <p class="settings-hint">Export often — this is your only backup!</p>
-      <div class="settings-actions">
-        <button id="btn-export" class="btn btn-primary">⬇ Export JSON</button>
-        <button id="btn-import" class="btn btn-secondary">⬆ Import JSON</button>
-        <input type="file" id="import-file" accept=".json" style="display:none" aria-hidden="true">
+      <div>
+        <div class="settings-group-label">About</div>
+        <div class="settings-group">
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v15</p>
+        </div>
       </div>
+
     </div>
   </div>
 </div>
 
 
-<!-- ── Goodreads-import Modal ─────────────────────────────────────────────── -->
+<!-- ── Goodreads-import Modal ─────────────────────────────────────────── -->
 <div id="goodreads-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goodreads-modal-title">
   <div class="modal-overlay" tabindex="-1"></div>
   <div class="modal-content modal-content--sm">
@@ -311,8 +376,8 @@
       <h2 id="goodreads-modal-title">Import from Goodreads</h2>
     </div>
     <div class="import-body">
-      <p>Found <strong id="goodreads-count">0</strong> books in your Goodreads export. What should we do?</p>
-      <p id="goodreads-note" class="settings-hint" style="margin-top:0.5rem">Languages will be set to English — you can update individual books afterwards.</p>
+      <p>Found <strong id="goodreads-count">0</strong> books in your export. What should we do?</p>
+      <p id="goodreads-note" style="font-size:0.82rem;color:var(--text3);margin-top:-0.4rem">Languages will default to English — update individual books afterwards.</p>
       <div class="import-actions">
         <button id="btn-goodreads-merge"   class="btn btn-primary">Merge with existing</button>
         <button id="btn-goodreads-replace" class="btn btn-danger">Replace all my books</button>
@@ -362,8 +427,7 @@
 
 <script>
 (async () => {
-  const V = '14';
-  // Strip any previous cache-bust param so we compare clean versions
+  const V = '15';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);
@@ -379,12 +443,9 @@
       ]);
     } catch (e) { /* ignore */ }
   }
-  // Cache-busting URL forces a genuine network fetch, bypassing any
-  // remaining HTTP cache or SW intercept after unregister
   location.replace(location.pathname + '?cb=' + V);
 })();
 </script>
 <script type="module" src="/js/app.js"></script>
-<!-- books-api.js is imported as a module by app.js -->
 </body>
 </html>
