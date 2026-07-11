@@ -157,22 +157,22 @@ export async function lookupISBN(isbn) {
   return null;
 }
 
-// Fetch the best cover for a book: Worker (Claude web search) → GB thumbnail → OL thumbnail
-export async function fetchCoverForBook({ title, author, thumbnail, isbn }) {
-  // 1. Claude web search via Worker (freshest, most accurate)
-  const workerCover = await fetchCoverViaWorker(title, author);
-  if (workerCover) return workerCover;
-
-  // 2. If we already have a thumbnail from GB/OL, keep it
-  if (thumbnail) return thumbnail;
-
-  // 3. Last resort: ISBN lookup for a thumbnail
+// Fetch the best cover for a book: Google Books → Open Library → Claude web search (last resort)
+export async function fetchCoverForBook({ title, author, isbn }) {
+  // 1. Google Books by ISBN (most reliable thumbnail)
   if (isbn) {
     const book = await lookupISBN(isbn);
     if (book?.thumbnail) return book.thumbnail;
   }
 
-  return null;
+  // 2. Google Books by title/author search
+  if (title) {
+    const { results } = await searchBooks(`${title} ${author || ''}`.trim(), 1);
+    if (results[0]?.thumbnail) return results[0].thumbnail;
+  }
+
+  // 3. Claude web search via Worker — last resort for books with no API cover
+  return await fetchCoverViaWorker(title, author);
 }
 
 export async function detectBarcodeFromVideoFrame(videoEl) {
