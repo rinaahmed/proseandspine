@@ -24,6 +24,24 @@ export function getLastCoverError() {
   return _lastCoverError;
 }
 
+// Turn a raw Worker/API error string into a short, human-readable message
+function friendlyCoverError(raw) {
+  const s = String(raw || '').toLowerCase();
+  if (s.includes('credit balance') || s.includes('too low') || s.includes('billing')) {
+    return 'Anthropic API is out of credits — add credits to fetch more covers.';
+  }
+  if (s.includes('rate limit') || s.includes('429')) {
+    return 'Anthropic API rate limit hit — wait a moment and try again.';
+  }
+  if (s.includes('authentication') || s.includes('invalid x-api-key') || s.includes('401')) {
+    return 'Anthropic API key is invalid — check the Worker secret.';
+  }
+  if (s.includes('not configured')) {
+    return 'Cover service not set up — the API key is missing on the Worker.';
+  }
+  return raw;
+}
+
 // Ask the Cloudflare Worker (Claude + web search) for the cover image URL
 async function fetchCoverViaWorker(title, author) {
   if (!COVER_WORKER_URL) return null;
@@ -39,11 +57,11 @@ async function fetchCoverViaWorker(title, author) {
     let data = null;
     try { data = await res.json(); } catch { /* non-JSON response */ }
     if (!res.ok) {
-      _lastCoverError = `Worker error ${res.status}: ${(data && data.error) || 'unknown'}`;
+      _lastCoverError = friendlyCoverError((data && data.error) || `Worker error ${res.status}`);
       return null;
     }
     if (data && data.error) {
-      _lastCoverError = data.error;
+      _lastCoverError = friendlyCoverError(data.error);
       return null;
     }
     return (data && data.coverUrl) || null;

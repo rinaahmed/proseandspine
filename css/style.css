@@ -512,11 +512,19 @@ body:has(.staging-banner:not(.hidden)) .header { top: 26px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, transform 0.15s;
+  transition: background 0.15s, transform 0.2s ease, opacity 0.2s ease;
   z-index: 90;
 }
 .fab:hover { background: var(--accent-hover); transform: scale(1.05); }
 .fab:active { transform: scale(0.96); }
+
+/* Fade the + button out of the way while the cover banner is showing so the
+   two ink-blue shapes never overlap and blend together. */
+body:has(#cover-fetch-banner:not(.hidden)) .fab {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
 
 /* ─── Modals ──────────────────────────────────────────────────────────────── */
 
@@ -1129,26 +1137,45 @@ body:has(.staging-banner:not(.hidden)) .header { top: 26px; }
 .cover-fetch-banner {
   position: fixed;
   bottom: 5.5rem;
-  left: 1rem; right: 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  /* Respect the iOS safe area so the text never runs under a notch/edge */
+  left: max(1rem, env(safe-area-inset-left));
+  right: max(1rem, env(safe-area-inset-right));
+  /* Default (in-progress) = neutral slate, distinct from the ink-blue FAB */
+  background: #3A4256;
+  color: #FFFFFF;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
-  padding: 12px 16px;
+  padding: 12px 14px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.84rem;
-  color: var(--text2);
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.86rem;
+  line-height: 1.35;
   z-index: 150;
 }
+/* Outcome colours */
+.cover-fetch-banner.is-success { background: #1C7C6B; border-color: #17685A; }
+.cover-fetch-banner.is-error   { background: #B4690E; border-color: #935509; }
 .cover-fetch-banner.hidden { display: none; }
-.cover-fetch-stop {
-  background: none; border: none; cursor: pointer;
-  color: var(--text3); font-size: 0.9rem; padding: 2px 4px;
+#cover-fetch-text {
+  flex: 1 1 auto;
+  min-width: 0;               /* allow the flex item to shrink so text wraps */
+  overflow-wrap: anywhere;    /* break long URLs / request IDs instead of clipping */
+  white-space: normal;
 }
-.cover-fetch-stop:hover { color: var(--text); }
+.cover-fetch-stop {
+  flex: 0 0 auto;
+  background: rgba(255,255,255,0.18);
+  border: none;
+  cursor: pointer;
+  color: #FFFFFF;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.cover-fetch-stop:hover { background: rgba(255,255,255,0.30); }
 
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */
 

@@ -4,6 +4,35 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v28] — 2026-07-11
+
+### Changed
+- **Cover banner is now status-coloured and no longer collides with the + button.** In-progress = slate, success = green, error = amber — so the message colour tells you the outcome at a glance. The floating + button fades out while the banner is showing so the two no longer overlap or blend together.
+
+---
+
+## [v27] — 2026-07-11
+
+### Changed
+- **Cover progress/result banner redesigned** — now has a solid ink-blue background (was easy to miss on white), respects the iOS safe area, and wraps long messages fully so nothing is cut off on the right edge.
+- **Friendly cover errors** — the raw API error is translated into a short message. E.g. an out-of-credits response now reads "Anthropic API is out of credits — add credits to fetch more covers" instead of dumping the raw JSON.
+
+---
+
+## [v26] — 2026-07-11
+
+### Added
+- **Cover-source tracking so bulk refresh skips finished books** (#10). Each book now records where its cover came from (`coverSource`). The cover actions are now three:
+  - **Refresh new covers** — Claude search for books *not yet done* (skips ones already covered by Claude, your baseline, or manually set). Cheap to re-run after adding books.
+  - **Fetch missing covers** — only books with no cover.
+  - **Re-fetch ALL covers** — redoes every book (slow, uses tokens); behind a confirm.
+- One-time migration marks all currently-covered books as done, so the first "Refresh new covers" run won't reprocess your existing library.
+
+### Fixed
+- Editing a book no longer drops fields that aren't on the form (e.g. `dateAdded`) — edits now merge onto the existing record.
+
+---
+
 ## [v25] — 2026-07-11
 
 ### Fixed
