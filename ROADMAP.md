@@ -30,7 +30,7 @@ per-book language field.
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- …
+- **Pick cover at add-time (Google vs. Claude)** — on-demand "Find cover with Claude" button in the Add/Edit form; after Claude's cover loads, let the user compare and fall back to the Google cover if they prefer it. #9
 
 ---
 
