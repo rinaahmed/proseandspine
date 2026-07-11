@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v30.1
+    ⚠ STAGING &nbsp;·&nbsp; v31.0
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v30.1</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v31.0</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
         <!-- equalizer / filter icon -->
         <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -196,25 +196,22 @@
         <input type="hidden" id="field-shelf" value="tbr">
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="field-language">Language</label>
-          <select id="field-language">
-            <option value="en">English</option>
-            <option value="de">German</option>
-            <option value="ur">Urdu</option>
-            <option value="fr">French</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="field-format">Format</label>
-          <select id="field-format">
-            <option value="">—</option>
-            <option value="paperback">Paperback</option>
-            <option value="hardcover">Hardcover</option>
-            <option value="ebook">Ebook</option>
-            <option value="audiobook">Audiobook</option>
-          </select>
+      <div class="form-group">
+        <label for="field-language">Language</label>
+        <select id="field-language">
+          <option value="en">English</option>
+          <option value="de">German</option>
+          <option value="ur">Urdu</option>
+          <option value="fr">French</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Format <span class="label-hint">(pick any)</span></label>
+        <div class="format-seg" id="format-seg">
+          <button type="button" class="format-seg-btn" data-format="kindle">Kindle</button>
+          <button type="button" class="format-seg-btn" data-format="paper">Paper</button>
+          <button type="button" class="format-seg-btn" data-format="audio">Audio</button>
         </div>
       </div>
 
@@ -404,7 +401,7 @@
       <div>
         <div class="settings-group-label">About</div>
         <div class="settings-group">
-          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v30.1</p>
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v31.0</p>
         </div>
       </div>
 
@@ -472,7 +469,7 @@
 
 <script>
 (async () => {
-  const V = '30.1';
+  const V = '31.0';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);

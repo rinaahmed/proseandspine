@@ -1,4 +1,4 @@
-import { getAllBooks, addBook, updateBook, deleteBook, importBooks, migrateCoverSource } from './db.js';
+import { getAllBooks, addBook, updateBook, deleteBook, importBooks, migrateCoverSource, migrateFormats, bookFormats } from './db.js';
 import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
@@ -11,7 +11,12 @@ const LANGUAGES = [
   { code: 'fr', label: 'French' },
 ];
 
-const FORMATS = ['paperback', 'hardcover', 'ebook', 'audiobook'];
+const FORMATS = [
+  { key: 'kindle', label: 'Kindle' },
+  { key: 'paper',  label: 'Paper'  },
+  { key: 'audio',  label: 'Audio'  },
+];
+const FORMAT_LABEL = Object.fromEntries(FORMATS.map(f => [f.key, f.label]));
 
 const COVER_PALETTE = ['#2A4B8D', '#3F6CB0', '#1C7C6B', '#6B4C9A', '#C24D6C', '#2E7D8A'];
 
@@ -195,7 +200,7 @@ function bookCardHTML(book) {
 
   let metaItems = [];
   if (book.language) metaItems.push(`<span class="meta-tag lang-tag">${langLabel(book.language)}</span>`);
-  if (book.format) metaItems.push(`<span class="meta-tag">${book.format}</span>`);
+  for (const f of bookFormats(book)) metaItems.push(`<span class="meta-tag format-tag">${FORMAT_LABEL[f] || f}</span>`);
   if (book.dateFinished) metaItems.push(`<span class="meta-tag">Finished ${fmtDate(book.dateFinished)}</span>`);
   else if (book.dateStarted) metaItems.push(`<span class="meta-tag">Started ${fmtDate(book.dateStarted)}</span>`);
 
@@ -395,7 +400,10 @@ function fillFormFromBook(book) {
   document.getElementById('field-title').value = book.title || '';
   document.getElementById('field-author').value = book.author || '';
   document.getElementById('field-language').value = book.language || 'en';
-  document.getElementById('field-format').value = book.format || '';
+  const formats = bookFormats(book);
+  document.querySelectorAll('.format-seg-btn').forEach(b => {
+    b.classList.toggle('active', formats.includes(b.dataset.format));
+  });
   const shelfVal = book.shelf || state.shelf;
   document.getElementById('field-shelf').value = shelfVal;
   document.querySelectorAll('.shelf-seg-btn').forEach(b => {
@@ -663,11 +671,13 @@ async function handleBookSubmit(e) {
   const shelf = document.getElementById('field-shelf').value;
   const progressValue = document.getElementById('field-progress-value').value;
 
+  const formats = [...document.querySelectorAll('.format-seg-btn.active')].map(b => b.dataset.format);
+
   const book = {
     title: document.getElementById('field-title').value.trim(),
     author: document.getElementById('field-author').value.trim(),
     language: document.getElementById('field-language').value,
-    format: document.getElementById('field-format').value || null,
+    formats,
     shelf,
     rating: parseFloat(document.getElementById('field-rating').value) || 0,
     dateStarted: document.getElementById('field-date-started').value || null,
@@ -788,6 +798,8 @@ function handleImportFile(e) {
 async function confirmImport(merge) {
   if (!state.pendingImport) return;
   await importBooks(state.pendingImport, merge);
+  await migrateFormats();
+  await migrateCoverSource();
   state.pendingImport = null;
   document.getElementById('import-modal').classList.add('hidden');
   await refreshBooks();
@@ -891,6 +903,8 @@ function handleGoodreadsFile(e) {
 async function confirmGoodreadsImport(merge) {
   if (!state.pendingImport) return;
   await importBooks(state.pendingImport, merge);
+  await migrateFormats();
+  await migrateCoverSource();
   state.pendingImport = null;
   document.getElementById('goodreads-modal').classList.add('hidden');
   closeSettings();
@@ -1106,6 +1120,11 @@ function bindEvents() {
     });
   });
 
+  // Format toggles — multi-select (a book can have several formats)
+  document.querySelectorAll('.format-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => btn.classList.toggle('active'));
+  });
+
   // Close modals with Escape
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -1129,6 +1148,7 @@ function registerSW() {
 async function init() {
   bindEvents();
   await migrateCoverSource();
+  await migrateFormats();
   await refreshBooks();
   registerSW();
 }

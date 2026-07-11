@@ -88,6 +88,39 @@ export async function migrateCoverSource() {
   return need.length;
 }
 
+// Map the old single `format` string to the new `formats` array.
+const LEGACY_FORMAT_MAP = {
+  paperback: 'paper', hardcover: 'paper', paper: 'paper',
+  ebook: 'kindle', kindle: 'kindle',
+  audiobook: 'audio', audio: 'audio',
+};
+
+// Derive a book's formats array from either the new field or the legacy `format`.
+export function bookFormats(book) {
+  if (Array.isArray(book.formats)) return book.formats;
+  const mapped = LEGACY_FORMAT_MAP[(book.format || '').toLowerCase()];
+  return mapped ? [mapped] : [];
+}
+
+// One-time backfill: give every book a `formats` array derived from `format`.
+// Idempotent — only writes books that don't already have `formats`.
+export async function migrateFormats() {
+  const books = await getAllBooks();
+  const need = books.filter(b => !Array.isArray(b.formats));
+  if (!need.length) return 0;
+  const db = await openDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    for (const b of need) {
+      store.put({ ...b, formats: bookFormats(b) });
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  return need.length;
+}
+
 export async function importBooks(books, merge) {
   if (!merge) await clearAllBooks();
   const db = await openDB();

@@ -708,6 +708,28 @@ body:has(#cover-fetch-banner:not(.hidden)) .fab {
   border-color: var(--accent);
 }
 
+/* Format multi-toggle (a book can have several formats) */
+.format-seg { display: flex; gap: 6px; }
+.format-seg-btn {
+  flex: 1;
+  padding: 9px;
+  border-radius: 9px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.84rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text2);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.format-seg-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.label-hint { font-weight: 400; color: var(--text3); font-size: 0.82em; }
+
 .progress-input { display: flex; gap: 0.5rem; }
 .progress-input select { width: 90px; flex-shrink: 0; }
 .progress-input input { flex: 1; }
