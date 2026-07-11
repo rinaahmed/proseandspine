@@ -432,6 +432,101 @@ function fillFormFromBook(book) {
   }
 
   document.getElementById('btn-delete').classList.toggle('hidden', !book.id);
+
+  initCoverPicker(book);
+}
+
+// ─── Cover picker (on-demand Google vs. Claude in the Add/Edit form) ──────────
+
+function initCoverPicker(book) {
+  const currentUrl = book.thumbnail || '';
+  const currentOpt = document.getElementById('cover-opt-current');
+  // The "current" option keeps the book's existing source (edit) or empty for a
+  // fresh add (empty → derive the source on save).
+  currentOpt.dataset.source = book.coverSource || '';
+  currentOpt.dataset.src = currentUrl;
+
+  const curImg = document.getElementById('cover-opt-current-img');
+  const curFallback = document.getElementById('cover-opt-current-fallback');
+  if (currentUrl) {
+    curImg.src = currentUrl; curImg.style.display = '';
+    curFallback.classList.add('hidden');
+  } else {
+    curImg.removeAttribute('src'); curImg.style.display = 'none';
+    curFallback.classList.remove('hidden');
+  }
+
+  const claudeOpt = document.getElementById('cover-opt-claude');
+  claudeOpt.classList.add('hidden');
+  claudeOpt.dataset.src = '';
+
+  selectCover('current');
+
+  const status = document.getElementById('cover-picker-status');
+  status.classList.add('hidden');
+  status.classList.remove('is-error');
+  status.textContent = '';
+  const btn = document.getElementById('btn-find-cover-claude');
+  btn.disabled = false;
+  btn.textContent = 'Find cover with Claude';
+}
+
+function selectCover(which) { // 'current' | 'claude'
+  const current = document.getElementById('cover-opt-current');
+  const claude = document.getElementById('cover-opt-claude');
+  const chosen = which === 'claude' ? claude : current;
+  [current, claude].forEach(o => o.classList.toggle('selected', o === chosen));
+
+  const url = chosen.dataset.src || '';
+  document.getElementById('field-thumbnail').value = url;
+  document.getElementById('field-cover-source').value = chosen.dataset.source || '';
+
+  // Keep the preview-header thumbnail (if shown) in sync with the choice
+  const pth = document.getElementById('preview-thumb');
+  if (pth) {
+    if (url) { pth.src = url; pth.style.display = ''; }
+    else { pth.style.display = 'none'; }
+  }
+}
+
+async function findCoverWithClaude() {
+  const title = document.getElementById('field-title').value.trim();
+  const author = document.getElementById('field-author').value.trim();
+  const status = document.getElementById('cover-picker-status');
+  const btn = document.getElementById('btn-find-cover-claude');
+
+  if (!title) {
+    status.classList.remove('hidden');
+    status.classList.add('is-error');
+    status.textContent = 'Enter a title first.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Searching…';
+  status.classList.remove('hidden', 'is-error');
+  status.textContent = 'Searching the web for a cover… (~15–30s)';
+
+  const url = await fetchCoverForBook({ title, author });
+
+  if (url) {
+    const claudeImg = document.getElementById('cover-opt-claude-img');
+    claudeImg.src = url;
+    const claudeOpt = document.getElementById('cover-opt-claude');
+    claudeOpt.dataset.src = url;
+    claudeOpt.classList.remove('hidden');
+    selectCover('claude');
+    status.classList.add('hidden');
+    status.textContent = '';
+    btn.disabled = false;
+    btn.textContent = 'Find again';
+  } else {
+    status.classList.remove('hidden');
+    status.classList.add('is-error');
+    status.textContent = getLastCoverError() || 'No cover found.';
+    btn.disabled = false;
+    btn.textContent = 'Try again';
+  }
 }
 
 function onQSInput() {
@@ -591,17 +686,21 @@ async function handleBookSubmit(e) {
     return;
   }
 
+  // The cover picker records the chosen source ('claude', or the book's original
+  // source when "Current" is kept). Empty means derive it below.
+  const chosenSource = document.getElementById('field-cover-source').value || null;
+
   if (id) {
     // Merge onto the existing record so fields not in the form (dateAdded,
-    // coverSource, …) are preserved. Keep the book's coverSource; if it never
-    // had one, derive from whether it now has a cover.
+    // coverSource, …) are preserved.
     const existing = state.books.find(b => b.id === parseInt(id)) || {};
-    const coverSource = existing.coverSource ?? (book.thumbnail ? 'existing' : null);
+    const coverSource = chosenSource ?? existing.coverSource ?? (book.thumbnail ? 'existing' : null);
     await updateBook({ ...existing, ...book, id: parseInt(id), coverSource });
   } else {
-    // New book: an auto cover from search is 'search' (bulk refresh may upgrade
-    // it to a Claude cover); no cover means it still needs one.
-    await addBook({ ...book, coverSource: book.thumbnail ? 'search' : null });
+    // New book: a picked Claude cover is 'claude'; an auto cover from search is
+    // 'search' (bulk refresh may upgrade it); no cover means it still needs one.
+    const coverSource = chosenSource ?? (book.thumbnail ? 'search' : null);
+    await addBook({ ...book, coverSource });
   }
 
   closeBookModal();
@@ -916,6 +1015,11 @@ function bindEvents() {
   });
   document.getElementById('qs-scan-btn').addEventListener('click', startCamera);
   document.getElementById('qs-camera-close').addEventListener('click', stopCamera);
+
+  // Cover picker
+  document.getElementById('btn-find-cover-claude')?.addEventListener('click', findCoverWithClaude);
+  document.getElementById('cover-opt-current')?.addEventListener('click', () => selectCover('current'));
+  document.getElementById('cover-opt-claude')?.addEventListener('click', () => selectCover('claude'));
 
   document.getElementById('btn-delete').addEventListener('click', () => {
     const id = parseInt(document.getElementById('field-id').value);
