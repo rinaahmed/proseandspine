@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.2] — 2026-07-11
+
+### Added
+- **Persistent storage** (#16, layer 1) — the app now asks the browser to keep your library from being auto-evicted under storage pressure. A new **Storage** section in Settings shows whether persistent storage is on and how much is stored; tap it to (re)request. This is a safety net, not a backup — keep exporting for true durability. Cloud backup/sync is still tracked separately.
+
+---
+
 ## [v32.1] — 2026-07-11
 
 ### Changed

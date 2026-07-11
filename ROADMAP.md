@@ -20,7 +20,7 @@ _Nothing queued — pull from the backlog below._
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- **Durable storage: persistent local + cloud backup** — IndexedDB can be evicted, so local + manual export isn't safe for years. Quick win: request `navigator.storage.persist()`. Bigger: opt-in cloud backup/sync (user's own Drive/Dropbox, or a Cloudflare-hosted backend). Keep it opt-in to preserve the on-device privacy default. #16
+- **Cloud backup / sync** — _layer 1 (persistent local storage) shipped in v32.2._ Remaining: opt-in cloud backup/sync so data survives device loss/reset — user's own Drive/Dropbox, or a Cloudflare-hosted backend. Keep it opt-in to preserve the on-device privacy default. #16
 - **Audible library import** _(undecided — may or may not build)_ — import audiobook titles from Audible via a selective checklist (untick a child's/private titles); no official API, needs a workaround source. Depends on multi-format (now shipped). #8
 
 ---

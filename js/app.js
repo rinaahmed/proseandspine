@@ -1,4 +1,4 @@
-import { getAllBooks, addBook, updateBook, deleteBook, importBooks, migrateCoverSource, migrateFormats, bookFormats } from './db.js';
+import { getAllBooks, addBook, updateBook, deleteBook, importBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
 import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
@@ -888,6 +888,7 @@ async function confirmFinish() {
 
 function openSettings() {
   document.getElementById('settings-modal').classList.remove('hidden');
+  refreshPersistStatus();
 }
 
 function closeSettings() {
@@ -1058,6 +1059,20 @@ async function refreshBooks() {
   renderBooks();
 }
 
+async function refreshPersistStatus() {
+  const el = document.getElementById('persist-status');
+  if (!el) return;
+  const { supported, persisted, usageMB } = await ensurePersistentStorage();
+  const size = usageMB != null ? ` · ${usageMB < 1 ? '<1' : Math.round(usageMB)} MB stored` : '';
+  if (!supported) {
+    el.textContent = 'Not available on this browser — export a backup regularly';
+  } else if (persisted) {
+    el.textContent = `On — your library won't be auto-cleared${size}`;
+  } else {
+    el.textContent = `Off — tap to protect your library from being cleared${size}`;
+  }
+}
+
 function syncSortControl() {
   const val = currentSort();
   const sel = document.getElementById('sort-by');
@@ -1092,6 +1107,12 @@ function bindEvents() {
 
   // Settings
   document.getElementById('btn-settings').addEventListener('click', openSettings);
+
+  // Persistent storage — tap to (re)request and refresh the status line
+  document.getElementById('btn-persist')?.addEventListener('click', async () => {
+    await ensurePersistentStorage();
+    await refreshPersistStatus();
+  });
   document.getElementById('settings-close').addEventListener('click', closeSettings);
   document.getElementById('settings-modal').querySelector('.modal-overlay').addEventListener('click', closeSettings);
 
@@ -1285,6 +1306,7 @@ function registerSW() {
 
 async function init() {
   bindEvents();
+  ensurePersistentStorage();  // request persistence up front (silent)
   await migrateCoverSource();
   await migrateFormats();
   syncSortControl();

@@ -88,6 +88,27 @@ export async function migrateCoverSource() {
   return need.length;
 }
 
+// Ask the browser to keep our data from being evicted under storage pressure.
+// Returns { supported, persisted, usageMB } describing the current state.
+export async function ensurePersistentStorage() {
+  const s = navigator.storage;
+  if (!s || !s.persist || !s.persisted) {
+    return { supported: false, persisted: false, usageMB: null };
+  }
+  let persisted = await s.persisted();
+  if (!persisted) {
+    try { persisted = await s.persist(); } catch { /* ignore */ }
+  }
+  let usageMB = null;
+  try {
+    if (s.estimate) {
+      const { usage } = await s.estimate();
+      if (typeof usage === 'number') usageMB = usage / (1024 * 1024);
+    }
+  } catch { /* ignore */ }
+  return { supported: true, persisted, usageMB };
+}
+
 // Map the old single `format` string to the new `formats` array.
 const LEGACY_FORMAT_MAP = {
   paperback: 'paper', hardcover: 'paper', paper: 'paper',
