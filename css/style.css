@@ -251,39 +251,46 @@ body:has(.staging-banner:not(.hidden)) .header {
   box-shadow: var(--shadow);
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .book-card { cursor: pointer; }
 .book-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
 
-/* Full book cover at top of card */
+/* Book cover — left column, fixed width */
 .card-thumb-wrap {
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  overflow: hidden;
-  background: var(--bg3);
-  position: relative;
+  width: 72px;
+  min-height: 108px;
   flex-shrink: 0;
+  background: var(--bg3);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  overflow: hidden;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .card-thumb-img {
-  width: 100%;
+  width: 72px;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center top;
   display: block;
 }
 .card-thumb-placeholder {
-  width: 100%;
-  height: 100%;
+  width: 72px;
+  min-height: 108px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
   font-family: var(--font-serif);
-  font-size: 2.5rem;
+  font-size: 1.8rem;
   color: var(--text3);
   font-style: italic;
   user-select: none;
+  flex-shrink: 0;
+  align-self: stretch;
 }
 
 .card-body { padding: 0.85rem; flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }

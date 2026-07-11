@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v12
+    ⚠ STAGING &nbsp;·&nbsp; v13
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v12</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v13</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
     </div>
 
@@ -362,7 +362,7 @@
 
 <script>
 (async () => {
-  const V = '10';
+  const V = '13';
   // Strip any previous cache-bust param so we compare clean versions
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
