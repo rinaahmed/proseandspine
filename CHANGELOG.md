@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v19] — 2026-07-11
+
+### Fixed
+- **Cover Worker now returns reliable Open Library URLs** — instead of asking Claude to return a raw image URL (often hotlink-protected), the Worker now asks Claude to find the book's ISBN via web search, then constructs a guaranteed-embeddable Open Library cover URL from it.
+
+---
+
 ## [v18] — 2026-07-11
 
 ### Fixed

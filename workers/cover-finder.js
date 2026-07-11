@@ -1,4 +1,4 @@
-// Cloudflare Worker — finds book cover image URLs using Claude + web search
+// Cloudflare Worker — finds book ISBN via Claude web search, returns Open Library cover URL
 // Deploy: wrangler deploy
 // Secret: wrangler secret put ANTHROPIC_API_KEY
 
@@ -18,29 +18,20 @@ function json(data, status = 200) {
   });
 }
 
-async function findCoverUrl(title, author, apiKey) {
-  const query = author
-    ? `"${title}" by ${author} book cover image`
-    : `"${title}" book cover image`;
-
+async function findISBN(title, author, apiKey) {
   const body = {
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 512,
     tools: [{ type: 'web_search_20260209', name: 'web_search' }],
     messages: [
       {
         role: 'user',
-        content: `Search the web for the book cover image of "${title}"${author ? ` by ${author}` : ''}.
+        content: `Search the web for the ISBN-13 of the book "${title}"${author ? ` by ${author}` : ''}.
 
-I need a cover image URL that can be embedded directly in an <img> tag — it must be a publicly accessible image file, not a webpage.
+Return ONLY the 13-digit ISBN number, nothing else — no dashes, no spaces, no other text. Example: 9780141439518
 
-Preferred sources (these allow hotlinking):
-- Open Library: https://covers.openlibrary.org/b/isbn/{ISBN}-L.jpg or https://covers.openlibrary.org/b/id/{ID}-L.jpg
-- Google Books: https://books.google.com/books/content?vid=ISBN{ISBN}&printsec=frontcover&img=1&zoom=1
-
-Search for the book, find its ISBN or Open Library ID, then construct or find the direct cover image URL.
-
-Return ONLY the image URL on a single line, nothing else. If you cannot find one, return "none".`,
+If you cannot find a 13-digit ISBN, try to find a 10-digit ISBN and return that instead.
+If you cannot find any ISBN, return "none".`,
       },
     ],
   };
@@ -61,20 +52,15 @@ Return ONLY the image URL on a single line, nothing else. If you cannot find one
   }
 
   const data = await res.json();
-
-  // Extract text from the final assistant message
   const textBlock = (data.content || []).find(b => b.type === 'text');
   if (!textBlock) return null;
 
   const text = textBlock.text.trim();
   if (text.toLowerCase() === 'none' || !text) return null;
 
-  // Extract URL from the response text
-  const urlMatch = text.match(/https?:\/\/\S+/);
-  if (!urlMatch) return null;
-
-  const url = urlMatch[0].replace(/[.,;)]+$/, '');
-  return url;
+  // Extract a 10 or 13 digit ISBN
+  const isbnMatch = text.match(/\b(\d{13}|\d{10})\b/);
+  return isbnMatch ? isbnMatch[1] : null;
 }
 
 export default {
@@ -101,8 +87,12 @@ export default {
     if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY not configured' }, 500);
 
     try {
-      const coverUrl = await findCoverUrl(title, author, apiKey);
-      return json({ coverUrl });
+      const isbn = await findISBN(title, author, apiKey);
+      if (!isbn) return json({ coverUrl: null });
+
+      // Construct a reliable Open Library cover URL from the ISBN
+      const coverUrl = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+      return json({ coverUrl, isbn });
     } catch (e) {
       console.error('cover-finder error:', e.message);
       return json({ error: e.message }, 500);
