@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v21
+    ⚠ STAGING &nbsp;·&nbsp; v22
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v21</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v22</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
         <!-- equalizer / filter icon -->
         <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -372,7 +372,7 @@
       <div>
         <div class="settings-group-label">About</div>
         <div class="settings-group">
-          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v21</p>
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v22</p>
         </div>
       </div>
 
@@ -440,7 +440,7 @@
 
 <script>
 (async () => {
-  const V = '21';
+  const V = '22';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);

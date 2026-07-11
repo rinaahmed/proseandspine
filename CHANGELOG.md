@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v22] — 2026-07-11
+
+### Fixed
+- **Cover Worker now uses web_fetch to get actual image URLs** — web_search alone only returns text snippets and can't see image CDN URLs. Now Claude searches for the Amazon product page URL, then fetches that page and extracts the `og:image` cover URL from the HTML metadata. Falls back to Goodreads if Amazon fails.
+
+---
+
 ## [v21] — 2026-07-11
 
 ### Changed
