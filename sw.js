@@ -1,4 +1,4 @@
-const CACHE = 'proseandspine-v1';
+const CACHE = 'proseandspine-v15';
 
 const APP_SHELL = [
   '/',
@@ -6,36 +6,36 @@ const APP_SHELL = [
   '/css/style.css',
   '/js/db.js',
   '/js/app.js',
+  '/js/books-api.js',
+  '/js/goodreads.js',
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/apple-touch-icon.svg',
 ];
 
-// Install: pre-cache app shell
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll(APP_SHELL))
   );
+  // Take over immediately — don't wait for old tabs to close
   self.skipWaiting();
 });
 
-// Activate: remove old caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
+    // Delete every cache that isn't the current version
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     )
   );
+  // Claim all open tabs immediately so they get the new SW right away
   self.clients.claim();
 });
 
-// Fetch: cache-first for app shell, network-first + cache fallback for fonts
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-
-  // Only handle same-origin GET and Google Fonts GET requests
   if (e.request.method !== 'GET') return;
 
+  const url = new URL(e.request.url);
   const isSameOrigin = url.origin === self.location.origin;
   const isFonts = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
 
@@ -46,35 +46,32 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       caches.open(CACHE).then(async cache => {
         const cached = await cache.match(e.request);
-        const networkPromise = fetch(e.request).then(res => {
+        const networkFetch = fetch(e.request).then(res => {
           if (res && res.status === 200) cache.put(e.request, res.clone());
           return res;
         }).catch(() => null);
-        return cached || networkPromise;
+        return cached || networkFetch;
       })
     );
     return;
   }
 
-  // Cache-first for same-origin assets
+  // Network-first for same-origin: always try to get fresh files,
+  // fall back to cache only when offline
   e.respondWith(
-    caches.open(CACHE).then(async cache => {
-      const cached = await cache.match(e.request);
-      if (cached) return cached;
-
-      try {
-        const response = await fetch(e.request);
-        if (response && response.status === 200 && response.type !== 'opaque') {
-          cache.put(e.request, response.clone());
+    fetch(e.request)
+      .then(res => {
+        if (res && res.status === 200 && res.type !== 'opaque') {
+          caches.open(CACHE).then(cache => cache.put(e.request, res.clone()));
         }
-        return response;
-      } catch {
-        // Offline fallback: return index.html for navigation requests
-        if (e.request.mode === 'navigate') {
-          return cache.match('/index.html');
-        }
-        return new Response('Offline', { status: 503 });
-      }
-    })
+        return res;
+      })
+      .catch(() =>
+        caches.match(e.request).then(cached =>
+          cached || (e.request.mode === 'navigate'
+            ? caches.match('/index.html')
+            : new Response('Offline', { status: 503 }))
+        )
+      )
   );
 });

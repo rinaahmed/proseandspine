@@ -1,4 +1,6 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks } from './db.js';
+import { searchBooks, lookupISBN, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
+import { parseGoodreadsCSV } from './goodreads.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -10,6 +12,8 @@ const LANGUAGES = [
 ];
 
 const FORMATS = ['paperback', 'hardcover', 'ebook', 'audiobook'];
+
+const COVER_PALETTE = ['#2A4B8D', '#3F6CB0', '#1C7C6B', '#6B4C9A', '#C24D6C', '#2E7D8A'];
 
 const SHELF_LABELS = {
   reading: 'Currently Reading',
@@ -132,14 +136,32 @@ function renderBooks() {
     const e = EMPTY_STATES[state.shelf] || {};
     grid.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">${e.icon || '📚'}</div>
+        <div class="empty-illustration">
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+          <div class="empty-spine"></div>
+        </div>
         <p class="empty-msg">${e.msg || 'Nothing here yet.'}</p>
         <p class="empty-hint">${e.hint || ''}</p>
+        <button class="btn-primary" onclick="document.getElementById('fab').click()">Add a book</button>
       </div>`;
     return;
   }
 
   grid.innerHTML = list.map(book => bookCardHTML(book)).join('');
+  bindThumbErrors(grid);
+}
+
+function bindThumbErrors(container) {
+  container.querySelectorAll('.card-thumb-img').forEach(img => {
+    img.addEventListener('error', () => {
+      const initial = img.dataset.initial || '?';
+      const color = img.dataset.color || COVER_PALETTE[0];
+      img.parentElement.outerHTML = `<div class="card-thumb-wrap card-thumb-placeholder" style="background:${color}"><span class="card-thumb-initial">${initial}</span></div>`;
+    }, { once: true });
+  });
 }
 
 function bookCardHTML(book) {
@@ -150,6 +172,15 @@ function bookCardHTML(book) {
   const authorDir = hasArabicScript(book.author) ? 'rtl' : 'auto';
 
   const tags = (book.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+  // Thumbnail
+  const thumbInitial = (book.title || '?')[0].toUpperCase();
+  const placeholderColor = COVER_PALETTE[(book.id || 0) % COVER_PALETTE.length];
+  const thumbHTML = book.thumbnail
+    ? `<div class="card-thumb-wrap">
+        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy" data-initial="${escape(thumbInitial)}" data-color="${placeholderColor}">
+       </div>`
+    : `<div class="card-thumb-wrap card-thumb-placeholder" style="background:${placeholderColor}"><span class="card-thumb-initial">${thumbInitial}</span></div>`;
 
   let progressHTML = '';
   if (book.shelf === 'reading' && book.progress && book.progress.value) {
@@ -174,23 +205,21 @@ function bookCardHTML(book) {
   if (book.shelf === 'tbr') {
     actionButtons = `<button class="card-action-btn" data-action="start" data-id="${book.id}">Start reading</button>`;
   } else if (book.shelf === 'reading') {
-    actionButtons = `<button class="card-action-btn primary" data-action="finish" data-id="${book.id}">Mark as finished</button>`;
+    actionButtons = `<button class="card-action-btn primary" data-action="finish" data-id="${book.id}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished</button>`;
   }
 
   return `
-    <article class="book-card" data-id="${book.id}">
+    <article class="book-card" data-id="${book.id}" data-action="edit" role="button" tabindex="0" aria-label="Edit ${escape(book.title)}">
+      ${thumbHTML}
       <div class="card-body">
-        <div class="card-header">
-          <h3 class="book-title ${titleClass}" dir="${titleDir}">${escape(book.title)}</h3>
-          <button class="card-edit-btn" data-action="edit" data-id="${book.id}" aria-label="Edit">✎</button>
-        </div>
+        <h3 class="book-title ${titleClass}" dir="${titleDir}">${escape(book.title)}</h3>
         <p class="book-author ${authorClass}" dir="${authorDir}">${escape(book.author)}</p>
         ${book.rating ? starsHTML(book.rating) : ''}
         ${book.notes ? `<p class="book-notes ${notesClass}" dir="auto">${escape(book.notes)}</p>` : ''}
         ${progressHTML}
         <div class="meta-row">${metaItems.join('')}${tagHTML}</div>
+        ${actionButtons ? `<div class="card-actions">${actionButtons}</div>` : ''}
       </div>
-      ${actionButtons ? `<div class="card-actions">${actionButtons}</div>` : ''}
     </article>`;
 }
 
@@ -331,31 +360,54 @@ function buildStarInput(containerId, hiddenInputId) {
   return { setVal };
 }
 
-// ─── Book Modal ───────────────────────────────────────────────────────────────
+// ─── Quick-search logic ───────────────────────────────────────────────────────
 
-let starInputMain = null;
+let _searchDebounce = null;
+let _cameraStream = null;
+let _barcodeInterval = null;
 
-function openBookModal(book = null) {
-  const modal = document.getElementById('book-modal');
-  const form = document.getElementById('book-form');
-  const title = document.getElementById('modal-title');
-  const deleteBtn = document.getElementById('btn-delete');
+function showQSPanel() {
+  document.getElementById('quick-search-panel').classList.remove('hidden');
+  document.getElementById('book-form').classList.add('hidden');
+  document.getElementById('qs-input').value = '';
+  const resultsList = document.getElementById('qs-results');
+  resultsList.classList.add('hidden');
+  resultsList.innerHTML = '';
+  resultsList._data = [];
+  document.getElementById('qs-spinner').classList.add('hidden');
+  document.getElementById('qs-scan-btn').classList.toggle('hidden', !isBarcodeSupported());
+  setTimeout(() => document.getElementById('qs-input').focus(), 80);
+}
 
-  title.textContent = book ? 'Edit Book' : 'Add Book';
-  form.reset();
-  document.getElementById('field-id').value = book ? book.id : '';
-  document.getElementById('field-title').value = book ? (book.title || '') : '';
-  document.getElementById('field-author').value = book ? (book.author || '') : '';
-  document.getElementById('field-language').value = book ? (book.language || 'en') : 'en';
-  document.getElementById('field-format').value = book ? (book.format || '') : '';
-  document.getElementById('field-shelf').value = book ? (book.shelf || state.shelf) : state.shelf;
-  document.getElementById('field-rating').value = book ? (book.rating || 0) : 0;
-  document.getElementById('field-date-started').value = book ? (book.dateStarted || '') : '';
-  document.getElementById('field-date-finished').value = book ? (book.dateFinished || '') : '';
-  document.getElementById('field-tags').value = book ? (book.tags || '') : '';
-  document.getElementById('field-notes').value = book ? (book.notes || '') : '';
+function showFormPanel(book = null) {
+  document.getElementById('quick-search-panel').classList.add('hidden');
+  document.getElementById('book-form').classList.remove('hidden');
+  stopCamera();
+  fillFormFromBook(book || {});
+  setTimeout(() => document.getElementById('field-title').focus(), 80);
+}
 
-  if (book && book.progress) {
+function fillFormFromBook(book) {
+  document.getElementById('book-form').reset();
+  document.getElementById('field-id').value = book.id || '';
+  document.getElementById('field-thumbnail').value = book.thumbnail || '';
+  document.getElementById('field-open-lib-key').value = book.openLibKey || '';
+  document.getElementById('field-title').value = book.title || '';
+  document.getElementById('field-author').value = book.author || '';
+  document.getElementById('field-language').value = book.language || 'en';
+  document.getElementById('field-format').value = book.format || '';
+  const shelfVal = book.shelf || state.shelf;
+  document.getElementById('field-shelf').value = shelfVal;
+  document.querySelectorAll('.shelf-seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.segShelf === shelfVal);
+  });
+  document.getElementById('field-rating').value = book.rating || 0;
+  document.getElementById('field-date-started').value = book.dateStarted || '';
+  document.getElementById('field-date-finished').value = book.dateFinished || '';
+  document.getElementById('field-tags').value = book.tags || '';
+  document.getElementById('field-notes').value = book.description || book.notes || '';
+
+  if (book.progress) {
     document.getElementById('field-progress-type').value = book.progress.type || 'percent';
     document.getElementById('field-progress-value').value = book.progress.value || '';
   } else {
@@ -363,20 +415,145 @@ function openBookModal(book = null) {
     document.getElementById('field-progress-value').value = '';
   }
 
-  deleteBtn.classList.toggle('hidden', !book);
-
   updateProgressVisibility();
+  if (!starInputMain) starInputMain = buildStarInput('star-input', 'field-rating');
+  starInputMain.setVal(book.rating || 0);
 
-  if (!starInputMain) {
-    starInputMain = buildStarInput('star-input', 'field-rating');
+  // Preview header — show when we have a search-picked book with title
+  const fromSearch = !!(book.openLibKey && book.title);
+  const previewHeader = document.getElementById('book-preview-header');
+  previewHeader.classList.toggle('hidden', !fromSearch);
+  if (fromSearch) {
+    document.getElementById('preview-title-text').textContent = book.title;
+    document.getElementById('preview-author-text').textContent = book.author || '';
+    const thumb = document.getElementById('preview-thumb');
+    if (book.thumbnail) { thumb.src = book.thumbnail; thumb.style.display = ''; }
+    else { thumb.style.display = 'none'; }
   }
-  starInputMain.setVal(book ? (book.rating || 0) : 0);
 
-  modal.classList.remove('hidden');
-  document.getElementById('field-title').focus();
+  document.getElementById('btn-delete').classList.toggle('hidden', !book.id);
+}
+
+function onQSInput() {
+  clearTimeout(_searchDebounce);
+  const q = document.getElementById('qs-input').value.trim();
+  const resultsList = document.getElementById('qs-results');
+  const spinner = document.getElementById('qs-spinner');
+
+  if (!q) {
+    resultsList.classList.add('hidden');
+    spinner.classList.add('hidden');
+    return;
+  }
+
+  spinner.classList.remove('hidden');
+  resultsList.classList.add('hidden');
+
+  _searchDebounce = setTimeout(async () => {
+    const { results, error } = await searchBooks(q);
+    spinner.classList.add('hidden');
+    if (error) {
+      resultsList.innerHTML = `<li class="qs-result-message qs-error">${error}</li>`;
+      resultsList.classList.remove('hidden');
+    } else {
+      renderQSResults(results, q);
+    }
+  }, 400);
+}
+
+function renderQSResults(books, query) {
+  const resultsList = document.getElementById('qs-results');
+  resultsList._data = books;
+
+  if (!books.length) {
+    resultsList.innerHTML = `<li class="qs-result-message">No results for "<strong>${escape(query)}</strong>" — tap <em>Add title only</em> below.</li>`;
+    resultsList.classList.remove('hidden');
+    return;
+  }
+
+  resultsList.innerHTML = books.map((b, i) => {
+    const year = (b.publishedDate || '').slice(0, 4);
+    const thumbEl = b.thumbnail
+      ? `<img class="qs-result-thumb" src="${escape(b.thumbnail)}" alt="" loading="lazy">`
+      : `<div class="qs-result-thumb-placeholder">📖</div>`;
+    return `<li class="qs-result-item" role="option" tabindex="0" data-index="${i}">
+      ${thumbEl}
+      <div class="qs-result-info">
+        <div class="qs-result-title" dir="auto">${escape(b.title)}</div>
+        <div class="qs-result-author" dir="auto">${escape(b.author)}</div>
+        ${year ? `<div class="qs-result-year">${year}</div>` : ''}
+      </div>
+    </li>`;
+  }).join('');
+
+  resultsList.classList.remove('hidden');
+}
+
+function onQSResultClick(e) {
+  const item = e.target.closest('.qs-result-item');
+  if (!item) return;
+  const resultsList = document.getElementById('qs-results');
+  const book = (resultsList._data || [])[parseInt(item.dataset.index)];
+  if (!book) return;
+  showFormPanel(book);
+}
+
+function onQSResultKeydown(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    onQSResultClick({ target: e.target });
+  }
+}
+
+// ─── Camera / barcode ─────────────────────────────────────────────────────────
+
+async function startCamera() {
+  const wrap = document.getElementById('qs-camera-wrap');
+  const video = document.getElementById('qs-video');
+  wrap.classList.remove('hidden');
+  try {
+    _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = _cameraStream;
+    await video.play();
+    _barcodeInterval = setInterval(async () => {
+      const code = await detectBarcodeFromVideoFrame(video);
+      if (!code) return;
+      stopCamera();
+      document.getElementById('qs-spinner').classList.remove('hidden');
+      const book = await lookupISBN(code);
+      document.getElementById('qs-spinner').classList.add('hidden');
+      if (book) { showFormPanel(book); }
+      else { document.getElementById('qs-input').value = code; onQSInput(); }
+    }, 600);
+  } catch {
+    wrap.classList.add('hidden');
+    alert('Camera access denied or not available.');
+  }
+}
+
+function stopCamera() {
+  clearInterval(_barcodeInterval);
+  _barcodeInterval = null;
+  if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
+  document.getElementById('qs-camera-wrap').classList.add('hidden');
+}
+
+// ─── Book Modal ───────────────────────────────────────────────────────────────
+
+let starInputMain = null;
+
+function openBookModal(book = null) {
+  document.getElementById('modal-title').textContent = book ? 'Edit Book' : 'Add Book';
+  if (book) {
+    showFormPanel(book);
+  } else {
+    showQSPanel();
+  }
+  document.getElementById('book-modal').classList.remove('hidden');
 }
 
 function closeBookModal() {
+  stopCamera();
   document.getElementById('book-modal').classList.add('hidden');
 }
 
@@ -402,6 +579,8 @@ async function handleBookSubmit(e) {
     dateFinished: document.getElementById('field-date-finished').value || null,
     tags: document.getElementById('field-tags').value.trim(),
     notes: document.getElementById('field-notes').value.trim(),
+    thumbnail: document.getElementById('field-thumbnail').value || null,
+    openLibKey: document.getElementById('field-open-lib-key').value || null,
     progress: shelf === 'reading' && progressValue
       ? { type: document.getElementById('field-progress-type').value, value: parseFloat(progressValue) }
       : null,
@@ -508,10 +687,90 @@ async function confirmImport(merge) {
   await refreshBooks();
 }
 
+// ─── Cover Fetching ───────────────────────────────────────────────────────────
+
+let _coverFetchAbort = false;
+
+async function fetchMissingCovers(books) {
+  const missing = books.filter(b => !b.thumbnail);
+  if (!missing.length) return;
+
+  _coverFetchAbort = false;
+  const banner = document.getElementById('cover-fetch-banner');
+  const bannerText = document.getElementById('cover-fetch-text');
+  banner.classList.remove('hidden');
+
+  let found = 0;
+  for (let i = 0; i < missing.length; i++) {
+    if (_coverFetchAbort) break;
+    const book = missing[i];
+    bannerText.textContent = `Fetching covers… ${i + 1} / ${missing.length}`;
+
+    let result = null;
+    if (book.isbn) {
+      result = await lookupISBN(book.isbn);
+    }
+    if (!result && book.title) {
+      const { results } = await searchBooks(`${book.title} ${book.author || ''}`.trim(), 1);
+      result = results[0] || null;
+    }
+
+    if (result?.thumbnail) {
+      await updateBook({ ...book, thumbnail: result.thumbnail, openLibKey: result.openLibKey || book.openLibKey });
+      found++;
+      // Refresh state but don't re-render yet to avoid flicker mid-loop
+      state.books = await getAllBooks();
+    }
+
+    // Small delay to be respectful to Open Library
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  banner.classList.add('hidden');
+  await refreshBooks();
+  if (found) bannerText.textContent = `Found covers for ${found} books.`;
+}
+
+// ─── Goodreads Import ─────────────────────────────────────────────────────────
+
+function handleGoodreadsFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const { books, error } = parseGoodreadsCSV(ev.target.result);
+    if (error) { alert(error); return; }
+    state.pendingImport = books;
+    document.getElementById('goodreads-count').textContent = books.length;
+    document.getElementById('goodreads-modal').classList.remove('hidden');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+async function confirmGoodreadsImport(merge) {
+  if (!state.pendingImport) return;
+  await importBooks(state.pendingImport, merge);
+  state.pendingImport = null;
+  document.getElementById('goodreads-modal').classList.add('hidden');
+  closeSettings();
+  await refreshBooks();
+  // Kick off background cover fetch for all books without thumbnails
+  fetchMissingCovers(state.books);
+}
+
 // ─── Data & Navigation ────────────────────────────────────────────────────────
+
+function updateShelfCounts() {
+  ['reading', 'tbr', 'read'].forEach(shelf => {
+    const el = document.getElementById('count-' + shelf);
+    if (el) el.textContent = state.books.filter(b => b.shelf === shelf).length;
+  });
+}
 
 async function refreshBooks() {
   state.books = await getAllBooks();
+  updateShelfCounts();
   renderBooks();
 }
 
@@ -556,20 +815,74 @@ function bindEvents() {
     document.getElementById('import-modal').classList.add('hidden');
   });
 
+  // Fetch missing covers
+  document.getElementById('btn-fetch-covers').addEventListener('click', () => {
+    closeSettings();
+    fetchMissingCovers(state.books);
+  });
+  document.getElementById('cover-fetch-stop').addEventListener('click', () => {
+    _coverFetchAbort = true;
+    document.getElementById('cover-fetch-banner').classList.add('hidden');
+  });
+
+  // Goodreads import
+  document.getElementById('btn-goodreads-import').addEventListener('click', () => {
+    document.getElementById('goodreads-file').click();
+  });
+  document.getElementById('goodreads-file').addEventListener('change', handleGoodreadsFile);
+  document.getElementById('btn-goodreads-merge').addEventListener('click', () => confirmGoodreadsImport(true));
+  document.getElementById('btn-goodreads-replace').addEventListener('click', () => confirmGoodreadsImport(false));
+  document.getElementById('btn-goodreads-cancel').addEventListener('click', () => {
+    state.pendingImport = null;
+    document.getElementById('goodreads-modal').classList.add('hidden');
+  });
+  document.getElementById('goodreads-modal').querySelector('.modal-overlay').addEventListener('click', () => {
+    state.pendingImport = null;
+    document.getElementById('goodreads-modal').classList.add('hidden');
+  });
+
   // Book modal
   document.getElementById('modal-close').addEventListener('click', closeBookModal);
   document.getElementById('btn-cancel').addEventListener('click', closeBookModal);
   document.getElementById('book-modal').querySelector('.modal-overlay').addEventListener('click', closeBookModal);
   document.getElementById('book-form').addEventListener('submit', handleBookSubmit);
-  document.getElementById('field-shelf').addEventListener('change', updateProgressVisibility);
 
-  document.getElementById('btn-delete').addEventListener('click', async () => {
+  // Quick-search panel
+  document.getElementById('qs-input').addEventListener('input', onQSInput);
+  document.getElementById('qs-results').addEventListener('click', onQSResultClick);
+  document.getElementById('qs-results').addEventListener('keydown', onQSResultKeydown);
+  document.getElementById('qs-manual-btn').addEventListener('click', () => {
+    // Pre-fill title from whatever they typed, then open form
+    const typed = document.getElementById('qs-input').value.trim();
+    showFormPanel({ title: typed, shelf: state.shelf });
+  });
+  document.getElementById('btn-change-book').addEventListener('click', () => {
+    showQSPanel();
+  });
+  document.getElementById('qs-scan-btn').addEventListener('click', startCamera);
+  document.getElementById('qs-camera-close').addEventListener('click', stopCamera);
+
+  document.getElementById('btn-delete').addEventListener('click', () => {
     const id = parseInt(document.getElementById('field-id').value);
     if (!id) return;
-    if (!confirm('Delete this book?')) return;
+    document.getElementById('delete-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-delete-confirm').addEventListener('click', async () => {
+    const id = parseInt(document.getElementById('field-id').value);
+    document.getElementById('delete-modal').classList.add('hidden');
+    if (!id) return;
     await deleteBook(id);
     closeBookModal();
     await refreshBooks();
+  });
+
+  document.getElementById('btn-delete-cancel').addEventListener('click', () => {
+    document.getElementById('delete-modal').classList.add('hidden');
+  });
+
+  document.getElementById('delete-modal').querySelector('.modal-overlay').addEventListener('click', () => {
+    document.getElementById('delete-modal').classList.add('hidden');
   });
 
   // Finish modal
@@ -579,23 +892,34 @@ function bindEvents() {
 
   // Card actions (delegated)
   document.getElementById('books-grid').addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    const id = parseInt(btn.dataset.id);
-    const action = btn.dataset.action;
-
-    if (action === 'edit') {
-      const book = state.books.find(b => b.id === id);
-      if (book) openBookModal(book);
-    } else if (action === 'finish') {
-      openFinishModal(id);
-    } else if (action === 'start') {
-      const book = state.books.find(b => b.id === id);
-      if (book) {
-        await updateBook({ ...book, shelf: 'reading', dateStarted: book.dateStarted || today() });
-        await refreshBooks();
+    // Action buttons inside the card (finish / start) take priority
+    const btn = e.target.closest('.card-action-btn[data-action]');
+    if (btn) {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const action = btn.dataset.action;
+      if (action === 'finish') { openFinishModal(id); return; }
+      if (action === 'start') {
+        const book = state.books.find(b => b.id === id);
+        if (book) { await updateBook({ ...book, shelf: 'reading', dateStarted: book.dateStarted || today() }); await refreshBooks(); }
+        return;
       }
     }
+    // Tap anywhere on card → edit
+    const card = e.target.closest('.book-card[data-action="edit"]');
+    if (!card) return;
+    const id = parseInt(card.dataset.id);
+    const book = state.books.find(b => b.id === id);
+    if (book) openBookModal(book);
+  });
+
+  document.getElementById('books-grid').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.book-card[data-action="edit"]');
+    if (!card) return;
+    e.preventDefault();
+    const book = state.books.find(b => b.id === parseInt(card.dataset.id));
+    if (book) openBookModal(book);
   });
 
   // Filters
@@ -604,25 +928,30 @@ function bindEvents() {
     renderBooks();
   });
 
-  document.getElementById('filter-language').addEventListener('change', (e) => {
-    state.filterLanguage = e.target.value;
-    renderBooks();
-  });
-
-  document.getElementById('filter-rating').addEventListener('change', (e) => {
-    state.filterRating = e.target.value;
-    renderBooks();
-  });
-
   document.getElementById('sort-by').addEventListener('change', (e) => {
     state.sortBy = e.target.value;
+    const labels = { dateAdded: 'Recent', title: 'Title', rating: 'Rating', dateFinished: 'Finished' };
+    const labelEl = document.getElementById('sort-label');
+    if (labelEl) labelEl.textContent = labels[e.target.value] || 'Recent';
     renderBooks();
+  });
+
+  // Segmented shelf control in book form
+  document.querySelectorAll('.shelf-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.shelf-seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const hidden = document.getElementById('field-shelf');
+      hidden.value = btn.dataset.segShelf;
+      updateProgressVisibility();
+    });
   });
 
   // Close modals with Escape
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!document.getElementById('book-modal').classList.contains('hidden')) closeBookModal();
+    if (!document.getElementById('delete-modal').classList.contains('hidden')) document.getElementById('delete-modal').classList.add('hidden');
+    else if (!document.getElementById('book-modal').classList.contains('hidden')) closeBookModal();
     else if (!document.getElementById('finish-modal').classList.contains('hidden')) closeFinishModal();
     else if (!document.getElementById('settings-modal').classList.contains('hidden')) closeSettings();
   });
