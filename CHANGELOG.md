@@ -4,6 +4,15 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v30.1] — 2026-07-11
+
+### Changed
+- **Full book covers in the list** (#12) — card thumbnails now show the entire cover (`object-fit: contain`) instead of cropping the left/right edges. A neutral backdrop fills any letterbox gap for covers that don't match the column proportions.
+
+_Versioning note: switched to `major.minor` from this release on. This is a minor (cosmetic) change._
+
+---
+
 ## [v30] — 2026-07-11
 
 ### Added
