@@ -4,6 +4,14 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v24] — 2026-07-11
+
+### Fixed
+- **Worker deploys were silently failing since v19** — removing the root `wrangler.toml` (needed to fix the site deployment) also removed the Worker's deploy config, so `wrangler deploy` had nothing to deploy and the Worker kept running the broken v17 code. The config now lives at `workers/wrangler.toml`; deploy with `cd workers && wrangler deploy`.
+- **Cover refresh errors are now visible** — the progress banner ends with a summary ("Updated X, no cover for Y"), and if nothing updated it shows the actual error from the Worker instead of failing silently.
+
+---
+
 ## [v23] — 2026-07-11
 
 ### Fixed

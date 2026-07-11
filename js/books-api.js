@@ -18,6 +18,12 @@ const LANG_MAP = {
   ara: 'ur',
 };
 
+// Last error from the cover Worker — surfaced in the UI so failures aren't silent
+let _lastCoverError = null;
+export function getLastCoverError() {
+  return _lastCoverError;
+}
+
 // Ask the Cloudflare Worker (Claude + web search) for the cover image URL
 async function fetchCoverViaWorker(title, author) {
   if (!COVER_WORKER_URL) return null;
@@ -30,10 +36,19 @@ async function fetchCoverViaWorker(title, author) {
       body: JSON.stringify({ title, author }),
       signal: ctrl.signal,
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.coverUrl || null;
-  } catch {
+    let data = null;
+    try { data = await res.json(); } catch { /* non-JSON response */ }
+    if (!res.ok) {
+      _lastCoverError = `Worker error ${res.status}: ${(data && data.error) || 'unknown'}`;
+      return null;
+    }
+    if (data && data.error) {
+      _lastCoverError = data.error;
+      return null;
+    }
+    return (data && data.coverUrl) || null;
+  } catch (e) {
+    _lastCoverError = e.name === 'AbortError' ? 'Worker timed out' : `Network: ${e.message}`;
     return null;
   } finally {
     clearTimeout(t);

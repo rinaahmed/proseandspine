@@ -1,0 +1,10 @@
+# Config for the cover-finder Worker ONLY.
+# Lives inside workers/ so the root of the repo stays a plain static site
+# (a root wrangler.toml makes Cloudflare deploy the whole site as a Worker).
+#
+# Deploy:      cd workers && wrangler deploy
+# Set secret:  cd workers && wrangler secret put ANTHROPIC_API_KEY
+
+name = "proseandspine-cover-finder"
+main = "cover-finder.js"
+compatibility_date = "2024-01-01"

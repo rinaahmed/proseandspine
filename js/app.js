@@ -1,5 +1,5 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks } from './db.js';
-import { searchBooks, lookupISBN, fetchCoverForBook, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
+import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -701,6 +701,7 @@ async function fetchMissingCovers(books, refreshAll = false) {
   banner.classList.remove('hidden');
 
   let found = 0;
+  let missed = 0;
   for (let i = 0; i < targets.length; i++) {
     if (_coverFetchAbort) break;
     const book = targets[i];
@@ -717,15 +718,22 @@ async function fetchMissingCovers(books, refreshAll = false) {
       await updateBook({ ...book, thumbnail: coverUrl });
       found++;
       state.books = await getAllBooks();
+    } else {
+      missed++;
     }
 
     // Small delay between requests
     await new Promise(r => setTimeout(r, 500));
   }
 
-  banner.classList.add('hidden');
   await refreshBooks();
-  if (found) bannerText.textContent = `Updated covers for ${found} books.`;
+
+  // Show the outcome — including the last error, so failures are never silent
+  let summary = `Updated ${found}, no cover for ${missed}.`;
+  const lastErr = getLastCoverError();
+  if (found === 0 && lastErr) summary = `No covers updated — ${lastErr}`;
+  bannerText.textContent = summary;
+  setTimeout(() => banner.classList.add('hidden'), 6000);
 }
 
 // ─── Goodreads Import ─────────────────────────────────────────────────────────
