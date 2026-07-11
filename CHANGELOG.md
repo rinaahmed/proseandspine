@@ -4,6 +4,17 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.1] — 2026-07-11
+
+### Changed
+- **Per-shelf sort** (#14) — each shelf now remembers its own sort instead of one global setting. Defaults: Reading → **date started** (newest first), Read → **date finished** (newest first), TBR → **recently added**. Your choice per shelf persists across sessions.
+- Added a **"Date started"** sort option.
+
+### Fixed
+- **Finished books default to today's date** (#15) — moving a book to Read without a finish date now sets it to today, so it lands at the top of the Read shelf.
+
+---
+
 ## [v32.0] — 2026-07-11
 
 ### Changed

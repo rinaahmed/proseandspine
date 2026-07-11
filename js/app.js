@@ -34,17 +34,37 @@ const EMPTY_STATES = {
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
+// Each shelf remembers its own sort; these are the defaults.
+const DEFAULT_SORT = { reading: 'dateStarted', tbr: 'dateAdded', read: 'dateFinished' };
+const SORT_LABELS = { dateAdded: 'Recent', dateStarted: 'Started', dateFinished: 'Finished', title: 'Title', rating: 'Rating' };
+
+function loadSortPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sortByShelf') || '{}');
+    return { ...DEFAULT_SORT, ...saved };
+  } catch {
+    return { ...DEFAULT_SORT };
+  }
+}
+function persistSortPrefs() {
+  try { localStorage.setItem('sortByShelf', JSON.stringify(state.sortByShelf)); } catch {}
+}
+
 const state = {
   shelf: 'reading',
   search: '',
   filterLanguage: '',
   filterRating: '',
-  sortBy: 'dateAdded',
+  sortByShelf: loadSortPrefs(),
   books: [],
   pendingFinishId: null,
   pendingImport: null,
   statsYear: null, // null = default (current year); otherwise a 'YYYY' string or 'all'
 };
+
+function currentSort() {
+  return state.sortByShelf[state.shelf] || DEFAULT_SORT[state.shelf] || 'dateAdded';
+}
 
 // Chart series colours (match the cover palette)
 const SERIES = ['#2A4B8D', '#3F6CB0', '#1C7C6B', '#6B4C9A', '#C24D6C', '#2E7D8A'];
@@ -113,9 +133,10 @@ function filterAndSort(books) {
   }
 
   list.sort((a, b) => {
-    switch (state.sortBy) {
+    switch (currentSort()) {
       case 'title': return (a.title || '').localeCompare(b.title || '');
       case 'rating': return (b.rating || 0) - (a.rating || 0);
+      case 'dateStarted': return (b.dateStarted || '').localeCompare(a.dateStarted || '');
       case 'dateFinished': return (b.dateFinished || '').localeCompare(a.dateFinished || '');
       case 'dateAdded':
       default: return (b.dateAdded || '').localeCompare(a.dateAdded || '');
@@ -799,6 +820,12 @@ async function handleBookSubmit(e) {
     return;
   }
 
+  // Moving a book to Read without a finish date defaults it to today, so it
+  // sorts to the top of the Read shelf (which sorts by date finished).
+  if (book.shelf === 'read' && !book.dateFinished) {
+    book.dateFinished = today();
+  }
+
   // The cover picker records the chosen source ('claude', or the book's original
   // source when "Current" is kept). Empty means derive it below.
   const chosenSource = document.getElementById('field-cover-source').value || null;
@@ -1031,6 +1058,14 @@ async function refreshBooks() {
   renderBooks();
 }
 
+function syncSortControl() {
+  const val = currentSort();
+  const sel = document.getElementById('sort-by');
+  if (sel) sel.value = val;
+  const labelEl = document.getElementById('sort-label');
+  if (labelEl) labelEl.textContent = SORT_LABELS[val] || 'Recent';
+}
+
 function setShelf(shelf) {
   state.shelf = shelf;
   document.querySelectorAll('.shelf-btn').forEach(btn => {
@@ -1040,6 +1075,7 @@ function setShelf(shelf) {
   const filterBar = document.getElementById('filter-bar');
   filterBar.classList.toggle('hidden', shelf === 'stats');
 
+  if (shelf !== 'stats') syncSortControl();
   renderBooks();
 }
 
@@ -1205,10 +1241,9 @@ function bindEvents() {
   });
 
   document.getElementById('sort-by').addEventListener('change', (e) => {
-    state.sortBy = e.target.value;
-    const labels = { dateAdded: 'Recent', title: 'Title', rating: 'Rating', dateFinished: 'Finished' };
-    const labelEl = document.getElementById('sort-label');
-    if (labelEl) labelEl.textContent = labels[e.target.value] || 'Recent';
+    state.sortByShelf[state.shelf] = e.target.value;
+    persistSortPrefs();
+    syncSortControl();
     renderBooks();
   });
 
@@ -1252,6 +1287,7 @@ async function init() {
   bindEvents();
   await migrateCoverSource();
   await migrateFormats();
+  syncSortControl();
   await refreshBooks();
   registerSW();
 }
