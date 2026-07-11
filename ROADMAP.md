@@ -33,6 +33,8 @@ _None open._
 
 ## Shipped
 
+- ✅ **Persistent local storage** — #16 (layer 1) — shipped in **v32.2**. Requests `navigator.storage.persist()`; Settings shows the state. (Cloud backup/sync remains open under #16.)
+- ✅ **Fix staging banner cropping the Settings header** — #17 — shipped in **v32.3**. Offsets full-page modals below the banner on staging.
 - ✅ **Per-shelf sort with sensible defaults** — #14 — shipped in **v32.1**. Each shelf remembers its own sort (Reading → started, Read → finished, TBR → added); added a "Date started" option; persists across sessions.
 - ✅ **Default finish date to today** — #15 — shipped in **v32.1**. Moving a book to Read without a date sets it to today so it sorts to the top.
 - ✅ **Redesign the Stats page** — #13 — shipped in **v32.0**. Reading-report layout: hero number, "Your years" chart, monthly rhythm, formats donut, languages, top tags, with year-over-year drill-in.

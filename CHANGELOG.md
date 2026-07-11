@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.3] — 2026-07-11
+
+### Fixed
+- **Staging banner no longer crops the Settings header** (#17) — full-page modals render outside `#app`, so the earlier banner offset didn't reach them; they now sit below the banner on staging. Staging-only; prod unaffected.
+
+---
+
 ## [v32.2] — 2026-07-11
 
 ### Added
