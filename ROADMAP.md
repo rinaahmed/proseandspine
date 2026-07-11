@@ -30,7 +30,7 @@ per-book language field.
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- **On-demand cover picker (Google vs. Claude), add & edit** — "Find cover with Claude" button in the Add/Edit form; after Claude's cover loads, compare and fall back to the Google cover if preferred. Works when editing a single existing book too. #9
+- …
 
 ---
 
@@ -42,6 +42,7 @@ _None open._
 
 ## Shipped
 
+- ✅ **On-demand cover picker (Google vs. Claude), add & edit** — #9 — shipped in **v30**. "Find cover with Claude" button in the book form; compare and choose, fall back to the current cover anytime; works per-book when editing.
 - ✅ **Fix staging banner cropping the first book row** — #11 — shipped in **v29**. Reserves the banner's height so the header/first card start below it.
 - ✅ **Track cover source to skip already-done books** — #10 — shipped in **v26**. Bulk "Refresh new covers" skips books already covered by Claude; "Fetch missing" and "Re-fetch ALL" round out the three actions.
 
