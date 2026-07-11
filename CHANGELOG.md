@@ -4,6 +4,14 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v18] — 2026-07-11
+
+### Fixed
+- **Cover refresh now finds embeddable images** — Claude web search Worker now specifically looks for Open Library and Google Books cover URLs (which allow hotlinking), instead of returning hotlink-protected Amazon/Goodreads image URLs that failed to load.
+- Claude web search remains first priority; Google Books is the fallback.
+
+---
+
 ## [v17] — 2026-07-11
 
 ### Added

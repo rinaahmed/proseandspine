@@ -157,22 +157,25 @@ export async function lookupISBN(isbn) {
   return null;
 }
 
-// Fetch the best cover for a book: Google Books → Open Library → Claude web search (last resort)
+// Fetch the best cover for a book: Claude web search → Google Books → Open Library
 export async function fetchCoverForBook({ title, author, isbn }) {
-  // 1. Google Books by ISBN (most reliable thumbnail)
+  // 1. Claude web search via Worker (internet-wide search, most current)
+  const workerCover = await fetchCoverViaWorker(title, author);
+  if (workerCover) return workerCover;
+
+  // 2. Google Books by ISBN
   if (isbn) {
     const book = await lookupISBN(isbn);
     if (book?.thumbnail) return book.thumbnail;
   }
 
-  // 2. Google Books by title/author search
+  // 3. Google Books by title/author search
   if (title) {
     const { results } = await searchBooks(`${title} ${author || ''}`.trim(), 1);
     if (results[0]?.thumbnail) return results[0].thumbnail;
   }
 
-  // 3. Claude web search via Worker — last resort for books with no API cover
-  return await fetchCoverViaWorker(title, author);
+  return null;
 }
 
 export async function detectBarcodeFromVideoFrame(videoEl) {

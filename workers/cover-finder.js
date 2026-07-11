@@ -31,8 +31,16 @@ async function findCoverUrl(title, author, apiKey) {
       {
         role: 'user',
         content: `Search the web for the book cover image of "${title}"${author ? ` by ${author}` : ''}.
-Find a direct URL to a high-quality cover image (JPEG or PNG) from a reliable source like Amazon, Google Books, Goodreads, or a publisher's website.
-Return ONLY the direct image URL, nothing else. The URL must end in .jpg, .jpeg, .png, or contain image parameters. If you cannot find a cover image URL, return the word "none".`,
+
+I need a cover image URL that can be embedded directly in an <img> tag — it must be a publicly accessible image file, not a webpage.
+
+Preferred sources (these allow hotlinking):
+- Open Library: https://covers.openlibrary.org/b/isbn/{ISBN}-L.jpg or https://covers.openlibrary.org/b/id/{ID}-L.jpg
+- Google Books: https://books.google.com/books/content?vid=ISBN{ISBN}&printsec=frontcover&img=1&zoom=1
+
+Search for the book, find its ISBN or Open Library ID, then construct or find the direct cover image URL.
+
+Return ONLY the image URL on a single line, nothing else. If you cannot find one, return "none".`,
       },
     ],
   };
