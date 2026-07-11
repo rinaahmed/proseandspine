@@ -1,5 +1,5 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks } from './db.js';
-import { searchBooks, lookupISBN, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
+import { searchBooks, lookupISBN, fetchCoverForBook, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -691,9 +691,9 @@ async function confirmImport(merge) {
 
 let _coverFetchAbort = false;
 
-async function fetchMissingCovers(books) {
-  const missing = books.filter(b => !b.thumbnail);
-  if (!missing.length) return;
+async function fetchMissingCovers(books, refreshAll = false) {
+  const targets = refreshAll ? books : books.filter(b => !b.thumbnail);
+  if (!targets.length) return;
 
   _coverFetchAbort = false;
   const banner = document.getElementById('cover-fetch-banner');
@@ -701,34 +701,31 @@ async function fetchMissingCovers(books) {
   banner.classList.remove('hidden');
 
   let found = 0;
-  for (let i = 0; i < missing.length; i++) {
+  for (let i = 0; i < targets.length; i++) {
     if (_coverFetchAbort) break;
-    const book = missing[i];
-    bannerText.textContent = `Fetching covers… ${i + 1} / ${missing.length}`;
+    const book = targets[i];
+    bannerText.textContent = `${refreshAll ? 'Refreshing' : 'Fetching'} covers… ${i + 1} / ${targets.length}`;
 
-    let result = null;
-    if (book.isbn) {
-      result = await lookupISBN(book.isbn);
-    }
-    if (!result && book.title) {
-      const { results } = await searchBooks(`${book.title} ${book.author || ''}`.trim(), 1);
-      result = results[0] || null;
-    }
+    const coverUrl = await fetchCoverForBook({
+      title: book.title,
+      author: book.author,
+      thumbnail: refreshAll ? null : book.thumbnail,
+      isbn: book.isbn,
+    });
 
-    if (result?.thumbnail) {
-      await updateBook({ ...book, thumbnail: result.thumbnail, openLibKey: result.openLibKey || book.openLibKey });
+    if (coverUrl && coverUrl !== book.thumbnail) {
+      await updateBook({ ...book, thumbnail: coverUrl });
       found++;
-      // Refresh state but don't re-render yet to avoid flicker mid-loop
       state.books = await getAllBooks();
     }
 
-    // Small delay to be respectful to Open Library
-    await new Promise(r => setTimeout(r, 250));
+    // Small delay between requests
+    await new Promise(r => setTimeout(r, 500));
   }
 
   banner.classList.add('hidden');
   await refreshBooks();
-  if (found) bannerText.textContent = `Found covers for ${found} books.`;
+  if (found) bannerText.textContent = `Updated covers for ${found} books.`;
 }
 
 // ─── Goodreads Import ─────────────────────────────────────────────────────────
@@ -818,7 +815,13 @@ function bindEvents() {
   // Fetch missing covers
   document.getElementById('btn-fetch-covers').addEventListener('click', () => {
     closeSettings();
-    fetchMissingCovers(state.books);
+    fetchMissingCovers(state.books, false);
+  });
+
+  // Refresh all covers (re-fetch even existing ones via Claude web search)
+  document.getElementById('btn-refresh-covers').addEventListener('click', () => {
+    closeSettings();
+    fetchMissingCovers(state.books, true);
   });
   document.getElementById('cover-fetch-stop').addEventListener('click', () => {
     _coverFetchAbort = true;

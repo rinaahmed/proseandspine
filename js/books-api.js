@@ -1,10 +1,14 @@
 // Book search: Google Books primary (better covers), Open Library fallback
+// Covers: Claude API web search via Cloudflare Worker (most accurate/current)
 // Google Books: https://developers.google.com/books/docs/v1/using
 // Open Library: https://openlibrary.org/developers/api
 
 const GB_SEARCH  = 'https://www.googleapis.com/books/v1/volumes';
 const OL_SEARCH  = 'https://openlibrary.org/search.json';
 const OL_COVERS  = 'https://covers.openlibrary.org/b/id';
+
+// Set this to your deployed Worker URL after running: wrangler deploy
+const COVER_WORKER_URL = 'https://proseandspine-cover-finder.workers.dev';
 
 const LANG_MAP = {
   eng: 'en', en: 'en',
@@ -13,6 +17,24 @@ const LANG_MAP = {
   fre: 'fr', fra: 'fr', fr: 'fr',
   ara: 'ur',
 };
+
+// Ask the Cloudflare Worker (Claude + web search) for a cover image URL
+async function fetchCoverViaWorker(title, author) {
+  if (!COVER_WORKER_URL) return null;
+  try {
+    const res = await fetch(COVER_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, author }),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.coverUrl || null;
+  } catch {
+    return null;
+  }
+}
 
 function fetchWithTimeout(url, ms = 8000) {
   const ctrl = new AbortController();
@@ -131,6 +153,24 @@ export async function lookupISBN(isbn) {
       if (data.docs?.[0]) return parseOLDoc(data.docs[0]);
     }
   } catch {}
+
+  return null;
+}
+
+// Fetch the best cover for a book: Worker (Claude web search) → GB thumbnail → OL thumbnail
+export async function fetchCoverForBook({ title, author, thumbnail, isbn }) {
+  // 1. Claude web search via Worker (freshest, most accurate)
+  const workerCover = await fetchCoverViaWorker(title, author);
+  if (workerCover) return workerCover;
+
+  // 2. If we already have a thumbnail from GB/OL, keep it
+  if (thumbnail) return thumbnail;
+
+  // 3. Last resort: ISBN lookup for a thumbnail
+  if (isbn) {
+    const book = await lookupISBN(isbn);
+    if (book?.thumbnail) return book.thumbnail;
+  }
 
   return null;
 }

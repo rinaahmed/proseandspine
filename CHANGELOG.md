@@ -4,6 +4,17 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v17] — 2026-07-11
+
+### Added
+- **Claude-powered cover search** — a Cloudflare Worker uses Claude API + web search to find current, high-quality cover images from the internet (Amazon, Goodreads, publishers, etc.). Far more accurate and up-to-date than Open Library.
+- **"Refresh all covers" in Settings** — re-fetches covers for every book in your library, replacing outdated or wrong covers found by previous lookups.
+
+### Changed
+- "Fetch missing covers" now uses Claude web search via the Worker as its primary source.
+
+---
+
 ## [v16] — 2026-07-11
 
 ### Changed
