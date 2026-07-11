@@ -4,6 +4,20 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v15] — 2026-07-11
+
+### Changed
+- **Marginalia visual redesign** — full design overhaul with ink-blue colour system, Spectral + Public Sans typefaces.
+- **Shelf tabs with live counts** — Reading / TBR / Read tabs now show book counts as badge pills.
+- **Coloured cover placeholders** — books without a cover image get a deterministic colour from a curated palette with a title-initial overlay.
+- **Redesigned filter bar** — simplified to search + sort only; sort shows a text label ("Recent", "Title", etc.).
+- **Segmented shelf control** — shelf picker in the Add/Edit form is now a three-button segmented control.
+- **New empty states** — animated spine-bars illustration replaces plain emoji empty states.
+- **Settings as full-page slide** — settings panel opens as a full-screen page with a back-arrow button.
+- **New app icon** — ink-blue book icon replacing the gold open-book.
+
+---
+
 ## [v14] — 2026-07-11
 
 ### Changed
