@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v14] — 2026-07-11
+
+### Changed
+- **Compact "Mark as finished" / "Start reading" buttons** — action buttons are now small pill-shaped labels inside the card body instead of a large gold block spanning the card height.
+
+---
+
 ## [v13] — 2026-07-11
 
 ### Changed

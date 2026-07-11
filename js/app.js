@@ -207,8 +207,8 @@ function bookCardHTML(book) {
         ${book.notes ? `<p class="book-notes ${notesClass}" dir="auto">${escape(book.notes)}</p>` : ''}
         ${progressHTML}
         <div class="meta-row">${metaItems.join('')}${tagHTML}</div>
+        ${actionButtons ? `<div class="card-actions">${actionButtons}</div>` : ''}
       </div>
-      ${actionButtons ? `<div class="card-actions">${actionButtons}</div>` : ''}
     </article>`;
 }
 
