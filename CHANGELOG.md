@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v16] — 2026-07-11
+
+### Changed
+- **Google Books as primary cover source** — searches and ISBN lookups now hit Google Books first (better quality, more current editions); Open Library is the fallback.
+
+---
+
 ## [v15] — 2026-07-11
 
 ### Changed
