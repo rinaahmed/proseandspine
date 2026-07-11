@@ -1,11 +1,10 @@
-// Cloudflare Worker — finds book cover image URLs via Claude web search + fetch
-// 1. Claude searches for the book on Amazon to get the product page URL
-// 2. Claude fetches that page and extracts the og:image cover URL
+// Cloudflare Worker — finds current book cover image URLs via Claude web search + fetch
+// Model must be Sonnet 4.6+ — the *_20260209 web tools are rejected (400) on Haiku.
 // Deploy: wrangler deploy
 // Secret: wrangler secret put ANTHROPIC_API_KEY
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-haiku-4-5';
+const MODEL = 'claude-sonnet-4-6';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -20,7 +19,7 @@ function json(data, status = 200) {
   });
 }
 
-async function findCoverUrl(title, author, apiKey) {
+async function askClaudeForCover(title, author, apiKey) {
   const body = {
     model: MODEL,
     max_tokens: 2048,
@@ -31,15 +30,19 @@ async function findCoverUrl(title, author, apiKey) {
     messages: [
       {
         role: 'user',
-        content: `Find the cover image for the book "${title}"${author ? ` by ${author}` : ''}.
+        content: `Find the cover image of the CURRENT edition of the book "${title}"${author ? ` by ${author}` : ''}.
 
-Step 1: Search for the book on Amazon to find its product page URL.
-Step 2: Fetch that Amazon product page and look for the og:image meta tag in the HTML, which contains the cover image URL. It looks like:
-<meta property="og:image" content="https://m.media-amazon.com/images/I/XXXXX.jpg"/>
+Steps:
+1. Search for the book on Goodreads (site:goodreads.com) or Amazon.
+2. Fetch the book's page and extract the cover image URL from the og:image meta tag, e.g.:
+   <meta property="og:image" content="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/...jpg"/>
+   or https://m.media-amazon.com/images/I/XXXXX.jpg
 
-Return ONLY the https://m.media-amazon.com/... image URL, nothing else.
-If you cannot find it on Amazon, try searching on Goodreads and fetch that page for the og:image instead.
-If you still cannot find a cover image URL, return "none".`,
+Rules:
+- Prefer the newest / currently in-print edition, NOT old editions from decades ago.
+- The URL must be a direct image file (jpg/png/webp) on an Amazon or Goodreads CDN.
+- Respond with ONLY the image URL on a single line. No explanation.
+- If no cover can be found, respond with exactly: none`,
       },
     ],
   };
@@ -56,23 +59,36 @@ If you still cannot find a cover image URL, return "none".`,
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Anthropic API error ${res.status}: ${err}`);
+    throw new Error(`Anthropic API error ${res.status}: ${err.slice(0, 300)}`);
   }
 
   const data = await res.json();
-  const textBlock = (data.content || []).find(b => b.type === 'text');
-  if (!textBlock) return null;
+  // Concatenate all text blocks (search/fetch runs can produce several)
+  const text = (data.content || [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
+    .join(' ')
+    .trim();
 
-  const text = textBlock.text.trim();
-  if (text.toLowerCase() === 'none' || !text) return null;
+  if (!text || /^none$/i.test(text)) return null;
 
-  // Extract any https image URL
-  const urlMatch = text.match(/https:\/\/[^\s"'<>]+\.jpg[^\s"'<>]*/i)
-    || text.match(/https:\/\/[^\s"'<>]+\.png[^\s"'<>]*/i)
-    || text.match(/https:\/\/[^\s"'<>]+/);
-  if (!urlMatch) return null;
+  const urlMatch = text.match(/https:\/\/[^\s"'<>()]+\.(?:jpg|jpeg|png|webp)[^\s"'<>()]*/i);
+  return urlMatch ? urlMatch[0].replace(/[.,;]+$/, '') : null;
+}
 
-  return urlMatch[0].replace(/[.,;)>]+$/, '');
+// Verify the URL actually serves an image before handing it to the app
+async function validateImageUrl(url) {
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; cover-finder)' },
+    });
+    if (!res.ok) return false;
+    const type = res.headers.get('content-type') || '';
+    return type.startsWith('image/');
+  } catch {
+    return false;
+  }
 }
 
 export default {
@@ -99,8 +115,11 @@ export default {
     if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY not configured' }, 500);
 
     try {
-      const coverUrl = await findCoverUrl(title, author, apiKey);
-      return json({ coverUrl });
+      const coverUrl = await askClaudeForCover(title, author, apiKey);
+      if (!coverUrl) return json({ coverUrl: null });
+
+      const ok = await validateImageUrl(coverUrl);
+      return json({ coverUrl: ok ? coverUrl : null });
     } catch (e) {
       console.error('cover-finder error:', e.message);
       return json({ error: e.message }, 500);

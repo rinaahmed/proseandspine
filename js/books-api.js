@@ -22,7 +22,7 @@ const LANG_MAP = {
 async function fetchCoverViaWorker(title, author) {
   if (!COVER_WORKER_URL) return null;
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 25000);
+  const t = setTimeout(() => ctrl.abort(), 45000);
   try {
     const res = await fetch(COVER_WORKER_URL, {
       method: 'POST',

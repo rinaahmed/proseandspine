@@ -4,6 +4,16 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v23] — 2026-07-11
+
+### Fixed
+- **Root cause of all cover failures found: wrong model in the Worker.** The Worker used `claude-haiku-4-5`, but the `web_search_20260209`/`web_fetch_20260209` tools only exist on Sonnet 4.6+ models — every API call was rejected with a 400 and the app silently swallowed the error. Switched to `claude-sonnet-4-6`.
+- **Worker now validates image URLs** — it fetches the URL itself and confirms it returns an actual image before handing it to the app.
+- **Prompt asks for the current in-print edition** — no more decades-old covers.
+- Cover lookup timeout raised to 45 s (search + page fetch takes longer).
+
+---
+
 ## [v22] — 2026-07-11
 
 ### Fixed
