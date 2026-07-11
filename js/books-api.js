@@ -8,7 +8,7 @@ const OL_SEARCH  = 'https://openlibrary.org/search.json';
 const OL_COVERS  = 'https://covers.openlibrary.org/b/id';
 
 // Set this to your deployed Worker URL after running: wrangler deploy
-const COVER_WORKER_URL = 'https://proseandspine-cover-finder.workers.dev';
+const COVER_WORKER_URL = 'https://proseandspine-cover-finder.rina-ahmed.workers.dev';
 
 const LANG_MAP = {
   eng: 'en', en: 'en',
