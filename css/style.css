@@ -251,39 +251,46 @@ body:has(.staging-banner:not(.hidden)) .header {
   box-shadow: var(--shadow);
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .book-card { cursor: pointer; }
 .book-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
 
-/* Full book cover at top of card */
+/* Book cover — left column, fixed width */
 .card-thumb-wrap {
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  overflow: hidden;
-  background: var(--bg3);
-  position: relative;
+  width: 72px;
+  min-height: 108px;
   flex-shrink: 0;
+  background: var(--bg3);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  overflow: hidden;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .card-thumb-img {
-  width: 100%;
+  width: 72px;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center top;
   display: block;
 }
 .card-thumb-placeholder {
-  width: 100%;
-  height: 100%;
+  width: 72px;
+  min-height: 108px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
   font-family: var(--font-serif);
-  font-size: 2.5rem;
+  font-size: 1.8rem;
   color: var(--text3);
   font-style: italic;
   user-select: none;
+  flex-shrink: 0;
+  align-self: stretch;
 }
 
 .card-body { padding: 0.85rem; flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
@@ -377,26 +384,23 @@ body:has(.staging-banner:not(.hidden)) .header {
 
 /* Card actions */
 .card-actions {
-  padding: 0.6rem 1rem;
-  border-top: 1px solid var(--border);
-  background: var(--bg2);
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
 }
 
 .card-action-btn {
-  flex: 1;
-  padding: 0.45rem 0.75rem;
+  padding: 0.3rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 20px;
   background: var(--surface);
-  color: var(--text);
+  color: var(--text2);
   font-family: var(--font-sans);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
-  text-align: center;
+  white-space: nowrap;
 }
 .card-action-btn:hover { background: var(--bg3); }
 .card-action-btn.primary {

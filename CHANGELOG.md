@@ -4,6 +4,20 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v14] — 2026-07-11
+
+### Changed
+- **Compact "Mark as finished" / "Start reading" buttons** — action buttons are now small pill-shaped labels inside the card body instead of a large gold block spanning the card height.
+
+---
+
+## [v13] — 2026-07-11
+
+### Changed
+- **Compact book covers** — cover thumbnails are now a narrow 72px column on the left of each card instead of a full-portrait image. Low-resolution covers no longer look blurry or pixelated. The card layout switches from column to row so title, author, and metadata flow to the right of the cover.
+
+---
+
 ## [v12] — 2026-07-10
 
 ### Added
