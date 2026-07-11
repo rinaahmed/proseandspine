@@ -21,7 +21,7 @@ _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
 - **Durable storage: persistent local + cloud backup** — IndexedDB can be evicted, so local + manual export isn't safe for years. Quick win: request `navigator.storage.persist()`. Bigger: opt-in cloud backup/sync (user's own Drive/Dropbox, or a Cloudflare-hosted backend). Keep it opt-in to preserve the on-device privacy default. #16
-- **Read shelf sorted by date finished (newest first)** — books marked read appear at the bottom; the Read shelf should default to `dateFinished` descending so the most recently finished sit on top. #14
+- **Per-shelf sort with sensible defaults** — sort is currently global and clobbers across shelves. Remember sort per shelf and default: Reading → date started (newest first), Read → date finished (newest first), TBR → date added. Needs a new "Date started" sort option. #14
 - **Default finish date to today** — if a book is moved to Read without a finish date (e.g. via the edit form), set `dateFinished` to today. Ties into #14. #15
 - **Audible library import** _(undecided — may or may not build)_ — import audiobook titles from Audible via a selective checklist (untick a child's/private titles); no official API, needs a workaround source. Depends on multi-format (now shipped). #8
 
