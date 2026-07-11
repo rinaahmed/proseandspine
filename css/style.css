@@ -581,6 +581,13 @@ body:has(#cover-fetch-banner:not(.hidden)) .fab {
   max-width: 100%;
   overflow-y: auto;
 }
+/* Full-page modals live outside #app, so the #app banner offset doesn't reach
+   them — push them below the staging banner so their header isn't cropped. */
+body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
+  margin-top: 26px;
+  height: calc(100dvh - 26px);
+  max-height: calc(100dvh - 26px);
+}
 
 .modal-header {
   display: flex;
