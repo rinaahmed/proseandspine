@@ -4,6 +4,14 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v25] — 2026-07-11
+
+### Fixed
+- **Cover refresh works end to end.** The Worker must be deployed from an isolated folder — deploying inside the repo made wrangler upload `.git` as static assets, which broke the browser's CORS preflight ("Network: Load failed"). Documented the safe deploy in `workers/README.md`.
+- Cover refresh now finds current-edition covers via Claude web search and populates them across the library.
+
+---
+
 ## [v24] — 2026-07-11
 
 ### Fixed
