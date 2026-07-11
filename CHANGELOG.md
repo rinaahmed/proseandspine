@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v21] — 2026-07-11
+
+### Changed
+- **Cover refresh uses Claude only** — no Google Books, no Open Library. Claude searches Amazon for each book and returns the cover image URL directly from Amazon's CDN (`m.media-amazon.com`), which is current, high-quality, and publicly embeddable.
+
+---
+
 ## [v20] — 2026-07-11
 
 ### Changed

@@ -18,11 +18,11 @@ const LANG_MAP = {
   ara: 'ur',
 };
 
-// Ask the Cloudflare Worker (Claude + web search) for the book's ISBN
-async function fetchIsbnViaWorker(title, author) {
+// Ask the Cloudflare Worker (Claude + web search) for the cover image URL
+async function fetchCoverViaWorker(title, author) {
   if (!COVER_WORKER_URL) return null;
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 20000);
+  const t = setTimeout(() => ctrl.abort(), 25000);
   try {
     const res = await fetch(COVER_WORKER_URL, {
       method: 'POST',
@@ -32,7 +32,7 @@ async function fetchIsbnViaWorker(title, author) {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return data.isbn || null;
+    return data.coverUrl || null;
   } catch {
     return null;
   } finally {
@@ -161,23 +161,9 @@ export async function lookupISBN(isbn) {
   return null;
 }
 
-// Fetch the best cover: Claude finds ISBN → Google Books thumbnail → GB title search fallback
-export async function fetchCoverForBook({ title, author, isbn }) {
-  // 1. Claude web search finds the ISBN, then we get the Google Books thumbnail for it
-  const workerIsbn = await fetchIsbnViaWorker(title, author);
-  const isbnToUse = workerIsbn || isbn;
-  if (isbnToUse) {
-    const book = await lookupISBN(isbnToUse);
-    if (book?.thumbnail) return book.thumbnail;
-  }
-
-  // 2. Fallback: Google Books title/author search
-  if (title) {
-    const { results } = await searchBooks(`${title} ${author || ''}`.trim(), 1);
-    if (results[0]?.thumbnail) return results[0].thumbnail;
-  }
-
-  return null;
+// Fetch cover via Claude web search only (finds Amazon CDN image URL)
+export async function fetchCoverForBook({ title, author }) {
+  return await fetchCoverViaWorker(title, author);
 }
 
 export async function detectBarcodeFromVideoFrame(videoEl) {

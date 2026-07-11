@@ -1,4 +1,5 @@
-// Cloudflare Worker — finds book ISBN via Claude web search, returns Open Library cover URL
+// Cloudflare Worker — finds book cover image URLs via Claude web search
+// Claude searches Amazon for the cover CDN image URL (embeddable, current quality)
 // Deploy: wrangler deploy
 // Secret: wrangler secret put ANTHROPIC_API_KEY
 
@@ -18,20 +19,23 @@ function json(data, status = 200) {
   });
 }
 
-async function findISBN(title, author, apiKey) {
+async function findCoverUrl(title, author, apiKey) {
   const body = {
     model: MODEL,
-    max_tokens: 512,
+    max_tokens: 1024,
     tools: [{ type: 'web_search_20260209', name: 'web_search' }],
     messages: [
       {
         role: 'user',
-        content: `Search the web for the ISBN-13 of the book "${title}"${author ? ` by ${author}` : ''}.
+        content: `Search Amazon for the book "${title}"${author ? ` by ${author}` : ''} and find the direct cover image URL.
 
-Return ONLY the 13-digit ISBN number, nothing else — no dashes, no spaces, no other text. Example: 9780141439518
+Amazon product images are hosted on m.media-amazon.com and look like:
+https://m.media-amazon.com/images/I/XXXXXXXXX.jpg
 
-If you cannot find a 13-digit ISBN, try to find a 10-digit ISBN and return that instead.
-If you cannot find any ISBN, return "none".`,
+Search for the book on Amazon, find the product page, and extract the cover image URL from m.media-amazon.com/images/. Return the largest version available (remove size suffixes like ._SX300_ or ._AC_UF_ from the URL to get the full image).
+
+Return ONLY the image URL on a single line, nothing else.
+If you cannot find an Amazon image URL, return "none".`,
       },
     ],
   };
@@ -58,9 +62,13 @@ If you cannot find any ISBN, return "none".`,
   const text = textBlock.text.trim();
   if (text.toLowerCase() === 'none' || !text) return null;
 
-  // Extract a 10 or 13 digit ISBN
-  const isbnMatch = text.match(/\b(\d{13}|\d{10})\b/);
-  return isbnMatch ? isbnMatch[1] : null;
+  // Extract Amazon CDN image URL
+  const urlMatch = text.match(/https:\/\/m\.media-amazon\.com\/images\/[^\s"'<>]+/);
+  if (!urlMatch) return null;
+
+  // Strip size suffixes to get full resolution: ._SX300_ ._AC_UF350,466_ etc.
+  const url = urlMatch[0].replace(/\._[^.]+_(\.\w+)$/, '$1').replace(/[.,;)]+$/, '');
+  return url;
 }
 
 export default {
@@ -87,9 +95,8 @@ export default {
     if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY not configured' }, 500);
 
     try {
-      const isbn = await findISBN(title, author, apiKey);
-      // Return the ISBN — the client will use it to get a Google Books thumbnail
-      return json({ isbn: isbn || null });
+      const coverUrl = await findCoverUrl(title, author, apiKey);
+      return json({ coverUrl });
     } catch (e) {
       console.error('cover-finder error:', e.message);
       return json({ error: e.message }, 500);
