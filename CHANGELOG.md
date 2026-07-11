@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v30] — 2026-07-11
+
+### Added
+- **On-demand cover picker in the Add/Edit form** (#9). Every book form now has a Cover chooser showing the current cover and a **"Find cover with Claude"** button. Tap it to search the web for a cover (~15–30s); when it returns, the Claude cover appears next to the current one and you tap whichever you prefer — you can always fall back to the current/Google cover. Works when editing any single existing book too, so you can fix one cover without a full bulk refresh. The chosen source is recorded (a Claude pick is marked done, so bulk refresh skips it).
+
+---
+
 ## [v29] — 2026-07-11
 
 ### Fixed
