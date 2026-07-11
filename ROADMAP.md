@@ -30,7 +30,7 @@ per-book language field.
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- …
+- **Redesign the Stats page** — current stats view is flat and unpolished; needs a cohesive dashboard-style redesign matching the app's design system, better visualisations, and possibly new stats (per-month reading, rating distribution, top authors, format breakdown). #13
 
 ---
 
