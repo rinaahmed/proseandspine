@@ -4,6 +4,14 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v27] — 2026-07-11
+
+### Changed
+- **Cover progress/result banner redesigned** — now has a solid ink-blue background (was easy to miss on white), respects the iOS safe area, and wraps long messages fully so nothing is cut off on the right edge.
+- **Friendly cover errors** — the raw API error is translated into a short message. E.g. an out-of-credits response now reads "Anthropic API is out of credits — add credits to fetch more covers" instead of dumping the raw JSON.
+
+---
+
 ## [v26] — 2026-07-11
 
 ### Added
