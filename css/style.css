@@ -3,6 +3,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  color-scheme: light;
   --bg:           #F7F8FA;
   --bg2:          #F0F1F4;
   --bg3:          #E8EAEF;
@@ -28,26 +29,6 @@
   --font-urdu:    'Noto Nastaliq Urdu', serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:           #12151E;
-    --bg2:          #1A1E2A;
-    --bg3:          #222738;
-    --surface:      #1E2232;
-    --border:       #2E3448;
-    --text:         #E8EDF8;
-    --text2:        #8A93B0;
-    --text3:        #5C6480;
-    --accent:       #5B7EC9;
-    --accent-hover: #6B8ED9;
-    --accent-tint:  #1A2240;
-    --accent-light: #1A2240;
-    --star-full:    #E0A100;
-    --star-empty:   #2E3448;
-    --shadow:       0 2px 8px rgba(0,0,0,0.28);
-    --shadow-lg:    0 8px 24px rgba(0,0,0,0.38);
-  }
-}
 
 html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
