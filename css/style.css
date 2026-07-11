@@ -58,6 +58,9 @@ body {
 }
 
 body:has(.staging-banner:not(.hidden)) .header { top: 26px; }
+/* Reserve the banner's height so the header (and the first book row) start
+   below it instead of sliding underneath and getting cropped. */
+body:has(.staging-banner:not(.hidden)) #app { padding-top: 26px; }
 
 /* ─── Header ────────────────────────────────────────────────────────────── */
 

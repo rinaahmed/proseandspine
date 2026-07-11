@@ -36,12 +36,13 @@ when they're ready to be worked on._
 
 ## Known bugs
 
-- 🐞 **Staging banner crops the first book row (staging only)** — the STAGING banner pushes the header down but the content top offset isn't adjusted, clipping the first card. Prod is unaffected. #11
+_None open._
 
 ---
 
 ## Shipped
 
+- ✅ **Fix staging banner cropping the first book row** — #11 — shipped in **v29**. Reserves the banner's height so the header/first card start below it.
 - ✅ **Track cover source to skip already-done books** — #10 — shipped in **v26**. Bulk "Refresh new covers" skips books already covered by Claude; "Fetch missing" and "Re-fetch ALL" round out the three actions.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history of released versions.

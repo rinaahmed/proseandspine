@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v29] — 2026-07-11
+
+### Fixed
+- **Staging banner no longer crops the first book row** (#11) — the banner's height is now reserved on the app container, so the header and first card start below it instead of sliding underneath. Staging-only; prod was unaffected.
+
+---
+
 ## [v28] — 2026-07-11
 
 ### Changed
