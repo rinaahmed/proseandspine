@@ -67,6 +67,27 @@ export function clearAllBooks() {
   }));
 }
 
+// One-time backfill of the coverSource field for books added before it existed.
+// Books that already have a cover are marked 'existing' (baseline — bulk refresh
+// leaves them alone); cover-less books get null so they can still be fetched.
+// Idempotent: only writes books that lack the field, so it no-ops after first run.
+export async function migrateCoverSource() {
+  const books = await getAllBooks();
+  const need = books.filter(b => b.coverSource === undefined);
+  if (!need.length) return 0;
+  const db = await openDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    for (const b of need) {
+      store.put({ ...b, coverSource: b.thumbnail ? 'existing' : null });
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  return need.length;
+}
+
 export async function importBooks(books, merge) {
   if (!merge) await clearAllBooks();
   const db = await openDB();

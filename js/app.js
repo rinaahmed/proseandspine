@@ -1,4 +1,4 @@
-import { getAllBooks, addBook, updateBook, deleteBook, importBooks } from './db.js';
+import { getAllBooks, addBook, updateBook, deleteBook, importBooks, migrateCoverSource } from './db.js';
 import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
@@ -592,9 +592,16 @@ async function handleBookSubmit(e) {
   }
 
   if (id) {
-    await updateBook({ ...book, id: parseInt(id) });
+    // Merge onto the existing record so fields not in the form (dateAdded,
+    // coverSource, …) are preserved. Keep the book's coverSource; if it never
+    // had one, derive from whether it now has a cover.
+    const existing = state.books.find(b => b.id === parseInt(id)) || {};
+    const coverSource = existing.coverSource ?? (book.thumbnail ? 'existing' : null);
+    await updateBook({ ...existing, ...book, id: parseInt(id), coverSource });
   } else {
-    await addBook(book);
+    // New book: an auto cover from search is 'search' (bulk refresh may upgrade
+    // it to a Claude cover); no cover means it still needs one.
+    await addBook({ ...book, coverSource: book.thumbnail ? 'search' : null });
   }
 
   closeBookModal();
@@ -691,31 +698,48 @@ async function confirmImport(merge) {
 
 let _coverFetchAbort = false;
 
-async function fetchMissingCovers(books, refreshAll = false) {
-  const targets = refreshAll ? books : books.filter(b => !b.thumbnail);
-  if (!targets.length) return;
+// Books already handled by Claude (or deliberately set) — bulk refresh skips these.
+const COVER_DONE = new Set(['claude', 'manual', 'existing']);
 
-  _coverFetchAbort = false;
+// mode: 'missing' (no cover) | 'refresh' (not yet Claude-done) | 'force' (every book)
+async function fetchMissingCovers(books, mode = 'missing') {
+  let targets;
+  if (mode === 'force') targets = books.slice();
+  else if (mode === 'refresh') targets = books.filter(b => !COVER_DONE.has(b.coverSource));
+  else targets = books.filter(b => !b.thumbnail);
+
   const banner = document.getElementById('cover-fetch-banner');
   const bannerText = document.getElementById('cover-fetch-text');
+
+  if (!targets.length) {
+    banner.classList.remove('hidden');
+    bannerText.textContent = mode === 'refresh'
+      ? 'All covers already up to date — nothing to do.'
+      : 'No books need a cover.';
+    setTimeout(() => banner.classList.add('hidden'), 4000);
+    return;
+  }
+
+  _coverFetchAbort = false;
   banner.classList.remove('hidden');
 
+  const verb = mode === 'missing' ? 'Fetching' : 'Refreshing';
   let found = 0;
   let missed = 0;
   for (let i = 0; i < targets.length; i++) {
     if (_coverFetchAbort) break;
     const book = targets[i];
-    bannerText.textContent = `${refreshAll ? 'Refreshing' : 'Fetching'} covers… ${i + 1} / ${targets.length}`;
+    bannerText.textContent = `${verb} covers… ${i + 1} / ${targets.length}`;
 
     const coverUrl = await fetchCoverForBook({
       title: book.title,
       author: book.author,
-      thumbnail: refreshAll ? null : book.thumbnail,
       isbn: book.isbn,
     });
 
-    if (coverUrl && coverUrl !== book.thumbnail) {
-      await updateBook({ ...book, thumbnail: coverUrl });
+    if (coverUrl) {
+      // Store the cover and mark it Claude-done so future refreshes skip it
+      await updateBook({ ...book, thumbnail: coverUrl, coverSource: 'claude' });
       found++;
       state.books = await getAllBooks();
     } else {
@@ -761,7 +785,7 @@ async function confirmGoodreadsImport(merge) {
   closeSettings();
   await refreshBooks();
   // Kick off background cover fetch for all books without thumbnails
-  fetchMissingCovers(state.books);
+  fetchMissingCovers(state.books, 'missing');
 }
 
 // ─── Data & Navigation ────────────────────────────────────────────────────────
@@ -820,16 +844,24 @@ function bindEvents() {
     document.getElementById('import-modal').classList.add('hidden');
   });
 
-  // Fetch missing covers
+  // Fetch missing covers (only books with no cover)
   document.getElementById('btn-fetch-covers')?.addEventListener('click', () => {
     closeSettings();
-    fetchMissingCovers(state.books, false);
+    fetchMissingCovers(state.books, 'missing');
   });
 
-  // Refresh all covers (re-fetch even existing ones via Claude web search)
+  // Refresh new covers (only books not yet done by Claude — skips finished ones)
   document.getElementById('btn-refresh-covers')?.addEventListener('click', () => {
     closeSettings();
-    fetchMissingCovers(state.books, true);
+    fetchMissingCovers(state.books, 'refresh');
+  });
+
+  // Force re-fetch EVERY cover (slow + uses tokens) — behind a confirm
+  document.getElementById('btn-force-covers')?.addEventListener('click', () => {
+    const done = state.books.filter(b => COVER_DONE.has(b.coverSource)).length;
+    if (!confirm(`Re-fetch covers for ALL ${state.books.length} books, including ${done} already done? This is slow and uses API tokens.`)) return;
+    closeSettings();
+    fetchMissingCovers(state.books, 'force');
   });
   document.getElementById('cover-fetch-stop')?.addEventListener('click', () => {
     _coverFetchAbort = true;
@@ -980,6 +1012,7 @@ function registerSW() {
 
 async function init() {
   bindEvents();
+  await migrateCoverSource();
   await refreshBooks();
   registerSW();
 }
