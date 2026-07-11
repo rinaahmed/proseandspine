@@ -1,4 +1,4 @@
-name = "proseandspine-cover-finder"
+name = "proseandspinestaging"
 main = "workers/cover-finder.js"
 compatibility_date = "2024-01-01"
 
