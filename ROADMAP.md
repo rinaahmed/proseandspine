@@ -21,8 +21,6 @@ _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
 - **Durable storage: persistent local + cloud backup** — IndexedDB can be evicted, so local + manual export isn't safe for years. Quick win: request `navigator.storage.persist()`. Bigger: opt-in cloud backup/sync (user's own Drive/Dropbox, or a Cloudflare-hosted backend). Keep it opt-in to preserve the on-device privacy default. #16
-- **Per-shelf sort with sensible defaults** — sort is currently global and clobbers across shelves. Remember sort per shelf and default: Reading → date started (newest first), Read → date finished (newest first), TBR → date added. Needs a new "Date started" sort option. #14
-- **Default finish date to today** — if a book is moved to Read without a finish date (e.g. via the edit form), set `dateFinished` to today. Ties into #14. #15
 - **Audible library import** _(undecided — may or may not build)_ — import audiobook titles from Audible via a selective checklist (untick a child's/private titles); no official API, needs a workaround source. Depends on multi-format (now shipped). #8
 
 ---
@@ -35,6 +33,8 @@ _None open._
 
 ## Shipped
 
+- ✅ **Per-shelf sort with sensible defaults** — #14 — shipped in **v32.1**. Each shelf remembers its own sort (Reading → started, Read → finished, TBR → added); added a "Date started" option; persists across sessions.
+- ✅ **Default finish date to today** — #15 — shipped in **v32.1**. Moving a book to Read without a date sets it to today so it sorts to the top.
 - ✅ **Redesign the Stats page** — #13 — shipped in **v32.0**. Reading-report layout: hero number, "Your years" chart, monthly rhythm, formats donut, languages, top tags, with year-over-year drill-in.
 - ✅ **Multi-format support: Kindle / Paper / Audio** — #7 — shipped in **v31.0**. A book can hold several formats at once; multi-select toggle in the form, a badge per format on cards, one-time migration of the old `format` field.
 - ✅ **Show full cover in list (no side cropping)** — #12 — shipped in **v30.1**. Card thumbnails use `object-fit: contain` with a neutral letterbox backdrop.
