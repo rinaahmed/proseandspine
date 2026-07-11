@@ -710,8 +710,14 @@ async function fetchMissingCovers(books, mode = 'missing') {
 
   const banner = document.getElementById('cover-fetch-banner');
   const bannerText = document.getElementById('cover-fetch-text');
+  // status: default (no class) = in-progress slate, 'is-success', 'is-error'
+  const setBannerStatus = (s) => {
+    banner.classList.remove('is-success', 'is-error');
+    if (s) banner.classList.add(s);
+  };
 
   if (!targets.length) {
+    setBannerStatus('is-success');
     banner.classList.remove('hidden');
     bannerText.textContent = mode === 'refresh'
       ? 'All covers already up to date — nothing to do.'
@@ -721,6 +727,7 @@ async function fetchMissingCovers(books, mode = 'missing') {
   }
 
   _coverFetchAbort = false;
+  setBannerStatus(null);
   banner.classList.remove('hidden');
 
   const verb = mode === 'missing' ? 'Fetching' : 'Refreshing';
@@ -755,7 +762,12 @@ async function fetchMissingCovers(books, mode = 'missing') {
   // Show the outcome — including the last error, so failures are never silent
   let summary = `Updated ${found}, no cover for ${missed}.`;
   const lastErr = getLastCoverError();
-  if (found === 0 && lastErr) summary = `No covers updated — ${lastErr}`;
+  if (found === 0 && lastErr) {
+    summary = `No covers updated — ${lastErr}`;
+    setBannerStatus('is-error');
+  } else {
+    setBannerStatus('is-success');
+  }
   bannerText.textContent = summary;
   setTimeout(() => banner.classList.add('hidden'), 6000);
 }

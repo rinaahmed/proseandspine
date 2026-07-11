@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v28] — 2026-07-11
+
+### Changed
+- **Cover banner is now status-coloured and no longer collides with the + button.** In-progress = slate, success = green, error = amber — so the message colour tells you the outcome at a glance. The floating + button fades out while the banner is showing so the two no longer overlap or blend together.
+
+---
+
 ## [v27] — 2026-07-11
 
 ### Changed
