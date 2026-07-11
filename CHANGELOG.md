@@ -4,6 +4,86 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v25] — 2026-07-11
+
+### Fixed
+- **Cover refresh works end to end.** The Worker must be deployed from an isolated folder — deploying inside the repo made wrangler upload `.git` as static assets, which broke the browser's CORS preflight ("Network: Load failed"). Documented the safe deploy in `workers/README.md`.
+- Cover refresh now finds current-edition covers via Claude web search and populates them across the library.
+
+---
+
+## [v24] — 2026-07-11
+
+### Fixed
+- **Worker deploys were silently failing since v19** — removing the root `wrangler.toml` (needed to fix the site deployment) also removed the Worker's deploy config, so `wrangler deploy` had nothing to deploy and the Worker kept running the broken v17 code. The config now lives at `workers/wrangler.toml`; deploy with `cd workers && wrangler deploy`.
+- **Cover refresh errors are now visible** — the progress banner ends with a summary ("Updated X, no cover for Y"), and if nothing updated it shows the actual error from the Worker instead of failing silently.
+
+---
+
+## [v23] — 2026-07-11
+
+### Fixed
+- **Root cause of all cover failures found: wrong model in the Worker.** The Worker used `claude-haiku-4-5`, but the `web_search_20260209`/`web_fetch_20260209` tools only exist on Sonnet 4.6+ models — every API call was rejected with a 400 and the app silently swallowed the error. Switched to `claude-sonnet-4-6`.
+- **Worker now validates image URLs** — it fetches the URL itself and confirms it returns an actual image before handing it to the app.
+- **Prompt asks for the current in-print edition** — no more decades-old covers.
+- Cover lookup timeout raised to 45 s (search + page fetch takes longer).
+
+---
+
+## [v22] — 2026-07-11
+
+### Fixed
+- **Cover Worker now uses web_fetch to get actual image URLs** — web_search alone only returns text snippets and can't see image CDN URLs. Now Claude searches for the Amazon product page URL, then fetches that page and extracts the `og:image` cover URL from the HTML metadata. Falls back to Goodreads if Amazon fails.
+
+---
+
+## [v21] — 2026-07-11
+
+### Changed
+- **Cover refresh uses Claude only** — no Google Books, no Open Library. Claude searches Amazon for each book and returns the cover image URL directly from Amazon's CDN (`m.media-amazon.com`), which is current, high-quality, and publicly embeddable.
+
+---
+
+## [v20] — 2026-07-11
+
+### Changed
+- **Cover refresh now uses Google Books thumbnails** — Claude web search finds the ISBN, then Google Books API returns the cover. Google Books has current, high-quality covers and allows hotlinking. Open Library is no longer used for cover refresh.
+
+---
+
+## [v19] — 2026-07-11
+
+### Fixed
+- **Cover Worker now returns reliable Open Library URLs** — instead of asking Claude to return a raw image URL (often hotlink-protected), the Worker now asks Claude to find the book's ISBN via web search, then constructs a guaranteed-embeddable Open Library cover URL from it.
+
+---
+
+## [v18] — 2026-07-11
+
+### Fixed
+- **Cover refresh now finds embeddable images** — Claude web search Worker now specifically looks for Open Library and Google Books cover URLs (which allow hotlinking), instead of returning hotlink-protected Amazon/Goodreads image URLs that failed to load.
+- Claude web search remains first priority; Google Books is the fallback.
+
+---
+
+## [v17] — 2026-07-11
+
+### Added
+- **Claude-powered cover search** — a Cloudflare Worker uses Claude API + web search to find current, high-quality cover images from the internet (Amazon, Goodreads, publishers, etc.). Far more accurate and up-to-date than Open Library.
+- **"Refresh all covers" in Settings** — re-fetches covers for every book in your library, replacing outdated or wrong covers found by previous lookups.
+
+### Changed
+- "Fetch missing covers" now uses Claude web search via the Worker as its primary source.
+
+---
+
+## [v16] — 2026-07-11
+
+### Changed
+- **Google Books as primary cover source** — searches and ISBN lookups now hit Google Books first (better quality, more current editions); Open Library is the fallback.
+
+---
+
 ## [v15] — 2026-07-11
 
 ### Changed

@@ -1,0 +1,11 @@
+# Config for the cover-finder Worker ONLY.
+#
+# IMPORTANT: deploy from an ISOLATED copy of this folder, NOT from inside the
+# git repo. If you run `wrangler deploy` inside the repo, wrangler walks up to
+# the repo root and uploads .git as "static assets", which flips the Worker
+# into static-asset mode and breaks the CORS preflight (browser then shows
+# "Network: Load failed"). See workers/README.md for the safe deploy steps.
+
+name = "proseandspine-cover-finder"
+main = "cover-finder.js"
+compatibility_date = "2024-01-01"
