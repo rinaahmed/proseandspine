@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v32.1
+    ⚠ STAGING &nbsp;·&nbsp; v32.2
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.1</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.2</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
         <!-- equalizer / filter icon -->
         <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -353,6 +353,26 @@
       </div>
 
       <div>
+        <div class="settings-group-label">Storage</div>
+        <div class="settings-group">
+          <button class="settings-row" id="btn-persist">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 2.5c3.5 0 6 1 6 2.3S12.5 7 9 7 3 6.1 3 4.8 5.5 2.5 9 2.5z"/>
+                <path d="M3 4.8v8.4C3 14.5 5.5 15.5 9 15.5s6-1 6-2.3V4.8"/>
+                <path d="M3 9c0 1.3 2.5 2.3 6 2.3s6-1 6-2.3"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Persistent storage</span>
+              <span class="settings-row-sub" id="persist-status">Checking…</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div>
         <div class="settings-group-label">Covers</div>
         <div class="settings-group">
           <button class="settings-row" id="btn-refresh-covers">
@@ -402,7 +422,7 @@
       <div>
         <div class="settings-group-label">About</div>
         <div class="settings-group">
-          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.1</p>
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.2</p>
         </div>
       </div>
 
@@ -470,7 +490,7 @@
 
 <script>
 (async () => {
-  const V = '32.1';
+  const V = '32.2';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);
