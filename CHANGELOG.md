@@ -4,6 +4,17 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v31.0] — 2026-07-11
+
+### Added
+- **Multi-format support: Kindle / Paper / Audio** (#7). A book can now have several formats at once (e.g. Kindle + Audio) via a multi-select toggle in the Add/Edit form. Cards show a badge for each format.
+
+### Changed
+- The single "Format" dropdown (Paperback/Hardcover/Ebook/Audiobook) is replaced by the three-way Kindle/Paper/Audio toggle.
+- One-time migration maps existing formats: paperback + hardcover → Paper, ebook → Kindle, audiobook → Audio. Goodreads imports are mapped the same way.
+
+---
+
 ## [v30.1] — 2026-07-11
 
 ### Changed
