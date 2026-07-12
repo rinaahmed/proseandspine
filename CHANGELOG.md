@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v35.1] — 2026-07-12
+
+### Fixed
+- **Book share card: cover was cropped, oversized and pixelated** — the cover now shows in full (no cropping), framed and centered on the card instead of stretched edge-to-edge. Upscaling is capped so small source thumbnails are drawn smaller rather than blown up into a blurry mess.
+
+---
+
 ## [v35.0] — 2026-07-12
 
 ### Added

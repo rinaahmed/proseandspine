@@ -769,8 +769,8 @@ async function drawBookCard(book, message) {
   ctxM.font = `italic 400 15px ${SERIF}`;
   const msgLines = message ? wrapLines(ctxM, message, W - P * 2 - 16, 4) : [];
 
-  const coverH = 440;
-  let y = coverH + 26;
+  const coverBoxH = 360, coverTop = 24;
+  let y = coverTop + coverBoxH + 26;
   y += 20 + 12;                        // status pill
   y += 14 + 8;                         // rating-aware header
   y += titleLines.length * 28 + 10;    // title
@@ -787,28 +787,41 @@ async function drawBookCard(book, message) {
 
   ctx.fillStyle = C.cream; ctx.fillRect(0, 0, W, H);
 
-  // Cover — object-fit: cover, cropped to the top band
+  // Cover — shown in full (no cropping), framed and centered on the cream
+  // background. Upscaling is capped so a small source thumbnail doesn't get
+  // blown up into a blurry mess — it's drawn smaller instead.
   const bitmap = await loadCoverBitmapForShare(book);
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0, 0, W, coverH); ctx.clip();
+  const maxUpscale = 2.5;
+  let cw, ch;
   if (bitmap) {
-    const scale = Math.max(W / bitmap.width, coverH / bitmap.height);
-    const dw = bitmap.width * scale, dh = bitmap.height * scale;
-    ctx.drawImage(bitmap, (W - dw) / 2, (coverH - dh) / 2, dw, dh);
+    const fitScale = Math.min((W - P * 2) / bitmap.width, coverBoxH / bitmap.height);
+    const scale = Math.min(fitScale, maxUpscale);
+    cw = bitmap.width * scale; ch = bitmap.height * scale;
+  } else {
+    cw = coverBoxH * 0.62; ch = coverBoxH * 0.86;
+  }
+  const cx = (W - cw) / 2, cy = coverTop + (coverBoxH - ch) / 2;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(32,35,44,0.22)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8;
+  roundedRectPath(ctx, cx, cy, cw, ch, 6);
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  roundedRectPath(ctx, cx, cy, cw, ch, 6); ctx.clip();
+  if (bitmap) {
+    ctx.drawImage(bitmap, cx, cy, cw, ch);
     bitmap.close?.();
   } else {
     ctx.fillStyle = COVER_PALETTE[(book.id || 0) % COVER_PALETTE.length];
-    ctx.fillRect(0, 0, W, coverH);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `600 120px ${SERIF}`; ctx.textAlign = 'center';
-    ctx.fillText((book.title || '?')[0].toUpperCase(), W / 2, coverH / 2 + 40);
+    ctx.fillRect(cx, cy, cw, ch);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `600 ${Math.round(ch * 0.35)}px ${SERIF}`; ctx.textAlign = 'center';
+    ctx.fillText((book.title || '?')[0].toUpperCase(), cx + cw / 2, cy + ch / 2 + ch * 0.12);
   }
-  // Soft seam so the cover blends into the panel below it
-  const seam = ctx.createLinearGradient(0, coverH - 60, 0, coverH);
-  seam.addColorStop(0, 'rgba(247,245,239,0)'); seam.addColorStop(1, C.cream);
-  ctx.fillStyle = seam; ctx.fillRect(0, coverH - 60, W, 60);
   ctx.restore();
 
-  let ty = coverH + 26;
+  let ty = coverTop + coverBoxH + 26;
 
   // Status pill
   const tag = shareStatusTag(book).toUpperCase();
