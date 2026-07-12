@@ -949,14 +949,20 @@ function handleImportFile(e) {
   e.target.value = '';
 }
 
-async function confirmImport(merge) {
+async function confirmImport(mode) {
   if (!state.pendingImport) return;
-  await importBooks(state.pendingImport, merge);
+  const { added, updated, skipped } = await importBooks(state.pendingImport, mode);
   await migrateFormats();
   await migrateCoverSource();
   state.pendingImport = null;
   document.getElementById('import-modal').classList.add('hidden');
   await refreshBooks();
+
+  const parts = [];
+  if (added) parts.push(`${added} added`);
+  if (updated) parts.push(`${updated} updated`);
+  if (skipped) parts.push(`${skipped} already in library`);
+  alert(`Import done — ${parts.join(', ') || 'nothing to import'}.`);
 }
 
 // ─── Cover Fetching ───────────────────────────────────────────────────────────
@@ -1056,7 +1062,8 @@ function handleGoodreadsFile(e) {
 
 async function confirmGoodreadsImport(merge) {
   if (!state.pendingImport) return;
-  await importBooks(state.pendingImport, merge);
+  // "Merge" adds only books not already present (no duplicates); "Replace" wipes first.
+  await importBooks(state.pendingImport, merge ? 'add-new' : 'replace');
   await migrateFormats();
   await migrateCoverSource();
   state.pendingImport = null;
@@ -1164,8 +1171,9 @@ function bindEvents() {
   document.getElementById('import-file').addEventListener('change', handleImportFile);
 
   // Import confirm
-  document.getElementById('btn-import-merge').addEventListener('click', () => confirmImport(true));
-  document.getElementById('btn-import-replace').addEventListener('click', () => confirmImport(false));
+  document.getElementById('btn-import-addnew').addEventListener('click', () => confirmImport('add-new'));
+  document.getElementById('btn-import-update').addEventListener('click', () => confirmImport('update'));
+  document.getElementById('btn-import-replace').addEventListener('click', () => confirmImport('replace'));
   document.getElementById('btn-import-cancel').addEventListener('click', () => {
     state.pendingImport = null;
     document.getElementById('import-modal').classList.add('hidden');

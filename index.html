@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v32.6
+    ⚠ STAGING &nbsp;·&nbsp; v32.7
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.6</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.7</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
         <!-- equalizer / filter icon -->
         <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -447,7 +447,7 @@
       <div>
         <div class="settings-group-label">About</div>
         <div class="settings-group">
-          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.6</p>
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.7</p>
         </div>
       </div>
 
@@ -520,11 +520,23 @@
       <h2 id="import-modal-title">Import books</h2>
     </div>
     <div class="import-body">
-      <p>Found <strong id="import-count">0</strong> books in the file. What should we do?</p>
+      <p>Found <strong id="import-count">0</strong> books in the file. A book already in your library is matched by ISBN, or by title + author. Choose how to import — you'll never end up with a book listed twice.</p>
+      <div class="import-choices">
+        <button id="btn-import-addnew" class="import-choice">
+          <span class="import-choice-title">Add new only</span>
+          <span class="import-choice-sub">Add books you don't have yet. Existing books are left exactly as they are.</span>
+        </button>
+        <button id="btn-import-update" class="import-choice">
+          <span class="import-choice-title">Update &amp; add</span>
+          <span class="import-choice-sub">Add new books, and refresh existing ones with the version from the file (covers, ratings, dates…).</span>
+        </button>
+        <button id="btn-import-replace" class="import-choice import-choice--danger">
+          <span class="import-choice-title">Replace everything</span>
+          <span class="import-choice-sub">Delete my whole library first, then load only what's in the file. Use for a clean restore.</span>
+        </button>
+      </div>
       <div class="import-actions">
-        <button id="btn-import-merge"   class="btn btn-primary">Merge with existing</button>
-        <button id="btn-import-replace" class="btn btn-danger">Replace all my books</button>
-        <button id="btn-import-cancel"  class="btn btn-secondary">Cancel</button>
+        <button id="btn-import-cancel" class="btn btn-secondary">Cancel</button>
       </div>
     </div>
   </div>
@@ -533,7 +545,7 @@
 
 <script>
 (async () => {
-  const V = '32.6';
+  const V = '32.7';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);

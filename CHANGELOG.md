@@ -4,6 +4,18 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.7] — 2026-07-11
+
+### Changed
+- **Import now de-duplicates — you can never end up with a book listed twice.** The old Merge (which blindly appended and caused duplicates) is replaced by three clearly-labelled choices, each with a description:
+  - **Add new only** — add books you don't have; existing ones left untouched.
+  - **Update & add** — add new books and refresh existing ones with the file's version (covers, ratings, dates…).
+  - **Replace everything** — wipe the library first, then load the file (clean restore).
+- Books are matched by **ISBN**, or by **title + author** when there's no ISBN. After import, a summary shows how many were added / updated / already present.
+- Goodreads import's "Merge" now also de-duplicates (adds only books not already present).
+
+---
+
 ## [v32.6] — 2026-07-11
 
 ### Added
