@@ -835,6 +835,8 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
 }
 .settings-row-text { flex: 1; min-width: 0; }
 .settings-row-title { font-size: 0.9rem; font-weight: 600; color: var(--text); display: block; }
+.settings-row--danger .settings-row-icon { color: var(--danger); }
+.settings-row--danger .settings-row-title { color: var(--danger); }
 .settings-row-sub { font-size: 0.78rem; color: var(--text2); display: block; margin-top: 1px; }
 .settings-chevron { color: var(--text3); flex-shrink: 0; }
 .settings-hint { font-size: 0.82rem; color: var(--text3); line-height: 1.55; padding: 12px 14px; border-bottom: 1px solid var(--bg2); }
@@ -851,6 +853,20 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
 .import-body, .finish-body { padding: 1.25rem 1.1rem; }
 .import-body p { margin-bottom: 0.75rem; font-size: 0.9rem; }
 .import-actions, .finish-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+
+/* Import choice cards */
+.import-choices { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
+.import-choice {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.import-choice:hover { border-color: var(--accent); background: var(--accent-tint); }
+.import-choice-title { font-weight: 700; font-size: 0.9rem; color: var(--text); }
+.import-choice-sub { font-size: 0.78rem; color: var(--text2); line-height: 1.35; }
+.import-choice--danger:hover { border-color: var(--danger); background: rgba(192,57,43,0.06); }
+.import-choice--danger .import-choice-title { color: var(--danger); }
 .import-actions .btn, .finish-actions .btn { width: 100%; text-align: center; padding: 13px; border-radius: 12px; }
 
 /* ─── Stats ───────────────────────────────────────────────────────────────── */

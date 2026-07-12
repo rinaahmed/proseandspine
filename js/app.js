@@ -1,4 +1,4 @@
-import { getAllBooks, addBook, updateBook, deleteBook, importBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
+import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
 import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
@@ -949,14 +949,20 @@ function handleImportFile(e) {
   e.target.value = '';
 }
 
-async function confirmImport(merge) {
+async function confirmImport(mode) {
   if (!state.pendingImport) return;
-  await importBooks(state.pendingImport, merge);
+  const { added, updated, skipped } = await importBooks(state.pendingImport, mode);
   await migrateFormats();
   await migrateCoverSource();
   state.pendingImport = null;
   document.getElementById('import-modal').classList.add('hidden');
   await refreshBooks();
+
+  const parts = [];
+  if (added) parts.push(`${added} added`);
+  if (updated) parts.push(`${updated} updated`);
+  if (skipped) parts.push(`${skipped} already in library`);
+  alert(`Import done — ${parts.join(', ') || 'nothing to import'}.`);
 }
 
 // ─── Cover Fetching ───────────────────────────────────────────────────────────
@@ -1056,7 +1062,8 @@ function handleGoodreadsFile(e) {
 
 async function confirmGoodreadsImport(merge) {
   if (!state.pendingImport) return;
-  await importBooks(state.pendingImport, merge);
+  // "Merge" adds only books not already present (no duplicates); "Replace" wipes first.
+  await importBooks(state.pendingImport, merge ? 'add-new' : 'replace');
   await migrateFormats();
   await migrateCoverSource();
   state.pendingImport = null;
@@ -1142,12 +1149,31 @@ function bindEvents() {
   // Export / Import
   document.getElementById('btn-backup-cloud')?.addEventListener('click', backupToCloud);
   document.getElementById('btn-export').addEventListener('click', exportData);
+
+  // Delete all books (start fresh) — behind a confirmation modal
+  document.getElementById('btn-reset-library')?.addEventListener('click', () => {
+    document.getElementById('reset-count').textContent = state.books.length;
+    document.getElementById('reset-modal').classList.remove('hidden');
+  });
+  document.getElementById('btn-reset-cancel')?.addEventListener('click', () => {
+    document.getElementById('reset-modal').classList.add('hidden');
+  });
+  document.getElementById('reset-modal')?.querySelector('.modal-overlay').addEventListener('click', () => {
+    document.getElementById('reset-modal').classList.add('hidden');
+  });
+  document.getElementById('btn-reset-confirm')?.addEventListener('click', async () => {
+    await clearAllBooks();
+    document.getElementById('reset-modal').classList.add('hidden');
+    closeSettings();
+    await refreshBooks();
+  });
   document.getElementById('btn-import').addEventListener('click', () => document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change', handleImportFile);
 
   // Import confirm
-  document.getElementById('btn-import-merge').addEventListener('click', () => confirmImport(true));
-  document.getElementById('btn-import-replace').addEventListener('click', () => confirmImport(false));
+  document.getElementById('btn-import-addnew').addEventListener('click', () => confirmImport('add-new'));
+  document.getElementById('btn-import-update').addEventListener('click', () => confirmImport('update'));
+  document.getElementById('btn-import-replace').addEventListener('click', () => confirmImport('replace'));
   document.getElementById('btn-import-cancel').addEventListener('click', () => {
     state.pendingImport = null;
     document.getElementById('import-modal').classList.add('hidden');

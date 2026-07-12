@@ -142,23 +142,64 @@ export async function migrateFormats() {
   return need.length;
 }
 
-export async function importBooks(books, merge) {
-  if (!merge) await clearAllBooks();
+// Identity key used to detect "the same book" across a library and an import
+// file: ISBN when present, otherwise normalised title + author.
+function matchKey(book) {
+  const isbn = (book.isbn || '').replace(/[^0-9Xx]/g, '');
+  if (isbn) return 'isbn:' + isbn.toLowerCase();
+  const norm = s => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return 'ta:' + norm(book.title) + '|' + norm(book.author);
+}
+
+// Import with one of three modes — no mode ever produces a duplicate:
+//   'add-new' : add only books not already present; leave existing untouched.
+//   'update'  : add new books AND overwrite existing ones with the file's version.
+//   'replace' : wipe the whole library first, then load the file.
+// Returns { added, updated, skipped }.
+export async function importBooks(books, mode = 'add-new') {
+  // Collapse duplicates within the file itself (last one wins).
+  const incoming = new Map();
+  for (const b of books) incoming.set(matchKey(b), b);
+
+  if (mode === 'replace') {
+    await clearAllBooks();
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      for (const b of incoming.values()) { const c = { ...b }; delete c.id; store.add(c); }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    return { added: incoming.size, updated: 0, skipped: 0 };
+  }
+
+  // add-new / update: match against what's already there.
+  const existing = await getAllBooks();
+  const existingByKey = new Map();
+  for (const b of existing) existingByKey.set(matchKey(b), b);
+
+  let added = 0, updated = 0, skipped = 0;
   const db = await openDB();
-  return new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
-    for (const book of books) {
-      const b = { ...book };
-      if (merge) {
-        delete b.id;
-        store.add(b);
+    for (const [key, book] of incoming) {
+      const current = existingByKey.get(key);
+      if (!current) {
+        const c = { ...book }; delete c.id;
+        store.add(c);
+        added++;
+      } else if (mode === 'update') {
+        // Overwrite the existing record (keep its id) with the file's version.
+        store.put({ ...book, id: current.id });
+        updated++;
       } else {
-        delete b.id;
-        store.add(b);
+        skipped++;
       }
     }
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  return { added, updated, skipped };
 }
