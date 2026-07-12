@@ -401,7 +401,7 @@ body:has(.staging-banner:not(.hidden)) #app { padding-top: 26px; }
 }
 
 /* Card action pill */
-.card-actions { display: flex; gap: 5px; margin-top: 3px; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
 
 .card-action-btn {
   display: inline-flex;
@@ -878,6 +878,20 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
   resize: vertical;
   white-space: pre;
   overflow: auto;
+}
+
+.share-book-textarea {
+  width: 100%;
+  margin-top: 10px;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  resize: vertical;
 }
 
 /* Import choice cards */

@@ -4,6 +4,34 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v35.3] — 2026-07-12
+
+### Fixed
+- **Book share card: "MY THOUGHTS" label sat right on top of the author line** — added breathing room between the author and the message section.
+
+---
+
+## [v35.2] — 2026-07-12
+
+### Changed
+- **Book share card refinements** — the message is now labelled "MY THOUGHTS" and set in a plain (non-italic) style so it reads as your own note rather than a quote from the book; title and author are larger and bolder for more visual weight; the cover is drawn smaller so the whole card sits closer to a square instead of a tall strip.
+
+---
+
+## [v35.1] — 2026-07-12
+
+### Fixed
+- **Book share card: cover was cropped, oversized and pixelated** — the cover now shows in full (no cropping), framed and centered on the card instead of stretched edge-to-edge. Upscaling is capped so small source thumbnails are drawn smaller rather than blown up into a blurry mess.
+
+---
+
+## [v35.0] — 2026-07-12
+
+### Added
+- **"Recommend this book" share card** — a **Share** button on every book card opens a small compose step (your notes, pre-filled and editable) and generates a poster-style card: cover as the hero, a rating-aware header ("Loved this" / "Recommend"), title/author, a reading-status tag ("Finished 2026" / "Currently reading" / "On my list"), your message as a pull-quote, and a Prose & Spine footer. Preview, share, or save the image — reuses the same share sheet as the year-in-books card. Covers render at full quality (fetched fresh through the Worker proxy when online, falling back to the local offline cache).
+
+---
+
 ## [v34.1] — 2026-07-12
 
 ### Fixed
