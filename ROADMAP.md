@@ -30,7 +30,6 @@ when they're ready to be worked on._
 
 ### Durability / infrastructure
 - **Replace Claude API with a different AI API** — swap the cover-finder Worker's provider (currently `claude-sonnet-4-6` + web search/fetch). Needs a replacement with web-search/fetch (or a separate search API); keep the Worker's `{coverUrl}` contract so the app is unchanged. #26
-- **Cache cover thumbnails locally** — covers are remote URLs today (slow loads, break when URLs rot). Store downscaled thumbnails in IndexedDB for instant/offline covers. Needs a Worker image-proxy (CORS) + a backup with/without-images toggle. #19
 - **Automatic cloud backup to OneDrive** — hands-off backup via Microsoft Graph (auto-write to the user's OneDrive, one-tap restore on a new device). Follow-on to the one-tap share backup. Needs Azure app + OAuth. #18
 
 ---
@@ -43,6 +42,7 @@ _None open._
 
 ## Shipped
 
+- ✅ **Cache cover thumbnails locally** — #19 — shipped in **v34.0**. Covers are downscaled (~200px) and stored in IndexedDB (DB schema v2, `covers` store); a one-time "Save covers offline" backfill in Settings pulls existing covers through the Worker image-proxy, new covers cache automatically, and rendering prefers the local copy. Unblocks the per-book share card (#27). The optional with/without-images backup toggle is deferred to a follow-up.
 - ✅ **Shareable "Year in books" card** — #24 — shipped in **v33.0–v33.4**. Editorial PNG from Stats (count, pages/best month, languages, highlights), with in-app preview, series collapsed, and a Stats "Highlights" list where you pin up to 5 reads to feature (`featured` flag on the book).
 - ✅ **AI import prompt** — shipped in **v32.10/32.11**. Copyable two-step prompt (numbered list → downloadable JSON) to turn a photo/screenshot of books into an importable file. Supersedes #8 (Audible import) — screenshot Audible and use this instead.
 - ✅ **Durable storage: persist + one-tap cloud backup** — #16 — persistent local storage in **v32.2** (`navigator.storage.persist()`), and one-tap "Back up to cloud" (share to OneDrive/iCloud/Files) in **v32.4**. Automatic OneDrive backup continues as #18.

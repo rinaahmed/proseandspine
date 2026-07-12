@@ -108,6 +108,25 @@ export default {
       return json({ error: 'Invalid JSON' }, 400);
     }
 
+    // Image proxy: fetch a cover image server-side (no CORS) and return the
+    // bytes so the app can downscale + cache it locally.
+    if (body.imageUrl) {
+      try {
+        const imgRes = await fetch(body.imageUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; cover-finder)' },
+        });
+        if (!imgRes.ok) return json({ error: `Image fetch ${imgRes.status}` }, 502);
+        const ct = imgRes.headers.get('content-type') || 'image/jpeg';
+        if (!ct.startsWith('image/')) return json({ error: 'Not an image' }, 415);
+        const buf = await imgRes.arrayBuffer();
+        return new Response(buf, {
+          headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400', ...CORS },
+        });
+      } catch (e) {
+        return json({ error: `Proxy error: ${e.message}` }, 500);
+      }
+    }
+
     const { title, author } = body;
     if (!title) return json({ error: 'title is required' }, 400);
 

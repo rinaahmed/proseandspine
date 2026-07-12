@@ -1,6 +1,7 @@
 const DB_NAME = 'proseandspine';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'books';
+const COVERS = 'covers';   // locally cached cover thumbnails (Blob per book id)
 
 let _db = null;
 
@@ -16,10 +17,56 @@ function openDB() {
         store.createIndex('language', 'language', { unique: false });
         store.createIndex('dateAdded', 'dateAdded', { unique: false });
       }
+      if (!db.objectStoreNames.contains(COVERS)) {
+        db.createObjectStore(COVERS); // out-of-line keys = book id
+      }
     };
     req.onsuccess = (e) => { _db = e.target.result; resolve(_db); };
     req.onerror = () => reject(req.error);
   });
+}
+
+// ─── Local cover cache ────────────────────────────────────────────────────────
+
+export function putCover(id, blob) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(COVERS, 'readwrite');
+    tx.objectStore(COVERS).put(blob, id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+export function getCover(id) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const req = db.transaction(COVERS, 'readonly').objectStore(COVERS).get(id);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+export function deleteCover(id) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(COVERS, 'readwrite');
+    tx.objectStore(COVERS).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+// Returns a Map of bookId → Blob for every cached cover.
+export function getAllCovers() {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const map = new Map();
+    const store = db.transaction(COVERS, 'readonly').objectStore(COVERS);
+    const req = store.openCursor();
+    req.onsuccess = () => {
+      const cur = req.result;
+      if (cur) { map.set(cur.key, cur.value); cur.continue(); }
+      else resolve(map);
+    };
+    req.onerror = () => reject(req.error);
+  }));
 }
 
 function withStore(mode, fn) {

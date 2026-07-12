@@ -1,5 +1,5 @@
-import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
-import { searchBooks, lookupISBN, fetchCoverForBook, fetchCoverViaGoogle, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
+import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage, putCover, deleteCover, getAllCovers } from './db.js';
+import { searchBooks, lookupISBN, fetchCoverForBook, fetchCoverViaGoogle, getLastCoverError, fetchImageBlob, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -230,9 +230,10 @@ function bookCardHTML(book) {
   // Thumbnail
   const thumbInitial = (book.title || '?')[0].toUpperCase();
   const placeholderColor = COVER_PALETTE[(book.id || 0) % COVER_PALETTE.length];
-  const thumbHTML = book.thumbnail
+  const coverSrc = _coverURLs.get(book.id) || book.thumbnail;
+  const thumbHTML = coverSrc
     ? `<div class="card-thumb-wrap">
-        <img class="card-thumb-img" src="${escape(book.thumbnail)}" alt="" loading="lazy" data-initial="${escape(thumbInitial)}" data-color="${placeholderColor}">
+        <img class="card-thumb-img" src="${escape(coverSrc)}" alt="" loading="lazy" data-initial="${escape(thumbInitial)}" data-color="${placeholderColor}">
        </div>`
     : `<div class="card-thumb-wrap card-thumb-placeholder" style="background:${placeholderColor}"><span class="card-thumb-initial">${thumbInitial}</span></div>`;
 
@@ -1150,17 +1151,28 @@ async function handleBookSubmit(e) {
   // source when "Current" is kept). Empty means derive it below.
   const chosenSource = document.getElementById('field-cover-source').value || null;
 
+  let savedId;
+  let prevThumb = null;
   if (id) {
     // Merge onto the existing record so fields not in the form (dateAdded,
     // coverSource, …) are preserved.
     const existing = state.books.find(b => b.id === parseInt(id)) || {};
+    prevThumb = existing.thumbnail || null;
     const coverSource = chosenSource ?? existing.coverSource ?? (book.thumbnail ? 'existing' : null);
-    await updateBook({ ...existing, ...book, id: parseInt(id), coverSource });
+    savedId = parseInt(id);
+    await updateBook({ ...existing, ...book, id: savedId, coverSource });
   } else {
     // New book: a picked Claude cover is 'claude'; an auto cover from search is
     // 'search' (bulk refresh may upgrade it); no cover means it still needs one.
     const coverSource = chosenSource ?? (book.thumbnail ? 'search' : null);
-    await addBook({ ...book, coverSource });
+    savedId = await addBook({ ...book, coverSource });
+  }
+
+  // Auto-cache the cover locally when it's new or changed.
+  if (book.thumbnail && book.thumbnail !== prevThumb) {
+    cacheCoverForBook({ id: savedId, thumbnail: book.thumbnail }).then(ok => {
+      if (ok) renderBooks();
+    }).catch(() => {});
   }
 
   closeBookModal();
@@ -1285,6 +1297,93 @@ async function confirmImport(mode) {
   alert(`Import done — ${parts.join(', ') || 'nothing to import'}.`);
 }
 
+// ─── Local Cover Cache ────────────────────────────────────────────────────────
+
+// bookId → object URL for a locally-cached (downscaled) cover thumbnail.
+// Rendering prefers these over the remote thumbnail so covers work offline and
+// don't hammer remote CDNs.
+const _coverURLs = new Map();
+let _cacheCoversAbort = false;
+
+// Load every cached cover blob into memory as object URLs (called once on init).
+async function loadCachedCovers() {
+  try {
+    const map = await getAllCovers();
+    for (const [id, blob] of map) {
+      _coverURLs.set(id, URL.createObjectURL(blob));
+    }
+  } catch { /* cache is best-effort */ }
+}
+
+// Downscale an image blob to a max width, re-encoding as JPEG to keep it small.
+// Returns a Blob (falls back to the original on any failure).
+async function downscaleToBlob(srcBlob, maxW = 200) {
+  try {
+    const bitmap = await createImageBitmap(srcBlob);
+    const scale = Math.min(1, maxW / bitmap.width);
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const out = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.82));
+    return out || srcBlob;
+  } catch {
+    return srcBlob;
+  }
+}
+
+// Fetch a book's remote cover through the Worker proxy, downscale it, store it
+// locally, and swap in the object URL. Returns true on success.
+async function cacheCoverForBook(book) {
+  if (!book || !book.thumbnail) return false;
+  const blob = await fetchImageBlob(book.thumbnail);
+  if (!blob) return false;
+  const small = await downscaleToBlob(blob);
+  await putCover(book.id, small);
+  const old = _coverURLs.get(book.id);
+  if (old) URL.revokeObjectURL(old);
+  _coverURLs.set(book.id, URL.createObjectURL(small));
+  return true;
+}
+
+// One-time backfill: cache every book that has a remote cover but no local copy.
+async function cacheAllCovers() {
+  const targets = state.books.filter(b => b.thumbnail && !_coverURLs.has(b.id));
+  const banner = document.getElementById('cover-fetch-banner');
+  const bannerText = document.getElementById('cover-fetch-text');
+  const setBannerStatus = (s) => {
+    banner.classList.remove('is-success', 'is-error');
+    if (s) banner.classList.add(s);
+  };
+
+  if (!targets.length) {
+    setBannerStatus('is-success');
+    banner.classList.remove('hidden');
+    bannerText.textContent = 'All covers are already saved offline.';
+    setTimeout(() => banner.classList.add('hidden'), 4000);
+    return;
+  }
+
+  _cacheCoversAbort = false;
+  setBannerStatus(null);
+  banner.classList.remove('hidden');
+
+  let saved = 0, failed = 0;
+  for (let i = 0; i < targets.length; i++) {
+    if (_cacheCoversAbort) break;
+    bannerText.textContent = `Saving covers offline… ${i + 1} / ${targets.length}`;
+    if (await cacheCoverForBook(targets[i])) saved++; else failed++;
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  renderBooks();
+  setBannerStatus(failed && !saved ? 'is-error' : 'is-success');
+  bannerText.textContent = `Saved ${saved} offline${failed ? `, ${failed} couldn't be fetched` : ''}.`;
+  setTimeout(() => banner.classList.add('hidden'), 6000);
+}
+
 // ─── Cover Fetching ───────────────────────────────────────────────────────────
 
 let _coverFetchAbort = false;
@@ -1337,8 +1436,11 @@ async function fetchMissingCovers(books, mode = 'missing', source = 'claude') {
     if (coverUrl) {
       // Google covers are marked 'google' (a later Claude refresh can still upgrade
       // them); Claude covers are marked 'claude' so refreshes skip them.
-      await updateBook({ ...book, thumbnail: coverUrl, coverSource: source === 'google' ? 'google' : 'claude' });
+      const updated = { ...book, thumbnail: coverUrl, coverSource: source === 'google' ? 'google' : 'claude' };
+      await updateBook(updated);
       found++;
+      // Cache the new cover locally so it renders offline right away.
+      cacheCoverForBook(updated).catch(() => {});
       state.books = await getAllBooks();
     } else {
       missed++;
@@ -1459,6 +1561,8 @@ function bindEvents() {
   document.getElementById('btn-settings').addEventListener('click', openSettings);
 
   // Persistent storage — tap to (re)request and refresh the status line
+  document.getElementById('btn-cache-covers')?.addEventListener('click', cacheAllCovers);
+
   document.getElementById('btn-persist')?.addEventListener('click', async () => {
     await ensurePersistentStorage();
     await refreshPersistStatus();
@@ -1557,6 +1661,7 @@ function bindEvents() {
   });
   document.getElementById('cover-fetch-stop')?.addEventListener('click', () => {
     _coverFetchAbort = true;
+    _cacheCoversAbort = true;
     document.getElementById('cover-fetch-banner').classList.add('hidden');
   });
 
@@ -1615,6 +1720,10 @@ function bindEvents() {
     document.getElementById('delete-modal').classList.add('hidden');
     if (!id) return;
     await deleteBook(id);
+    // Drop any locally-cached cover for this book.
+    const url = _coverURLs.get(id);
+    if (url) { URL.revokeObjectURL(url); _coverURLs.delete(id); }
+    deleteCover(id).catch(() => {});
     closeBookModal();
     await refreshBooks();
   });
@@ -1718,6 +1827,7 @@ async function init() {
   ensurePersistentStorage();  // request persistence up front (silent)
   await migrateCoverSource();
   await migrateFormats();
+  await loadCachedCovers();
   syncSortControl();
   await refreshBooks();
   registerSW();

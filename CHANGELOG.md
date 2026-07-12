@@ -4,6 +4,17 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v34.0] — 2026-07-12
+
+### Added
+- **Local cover cache** — cover thumbnails are now stored **on your device** (downscaled to ~200px, in IndexedDB) so they load instantly and work fully offline. A one-time **"Save covers offline"** action in Settings → Storage backfills every existing cover through the Worker image-proxy; new covers (from search, per-book find, or bulk fetch) are cached automatically as they arrive. Rendering prefers the local copy, falling back to the remote URL when a book isn't cached yet. This also lays the groundwork for per-book share cards (a future feature), which need an untainted local image to draw onto a canvas.
+
+### Notes
+- The database schema moved to version 2 (added a `covers` store). This is automatic and non-destructive — existing books are untouched.
+- Requires the cover Worker to be redeployed (adds the image-proxy endpoint).
+
+---
+
 ## [v33.6] — 2026-07-11
 
 ### Added
