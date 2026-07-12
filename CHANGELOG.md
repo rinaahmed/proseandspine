@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.10] — 2026-07-11
+
+### Added
+- **Copy AI import prompt** (Settings → Your library) — opens a ready-made prompt describing the app's exact import JSON format. Paste it into any AI assistant with a photo/screenshot of your books; it returns an importable file you can trim and load via Import backup (Add new only). A lightweight alternative to a built-in Audible/library import.
+
+---
+
 ## [v32.9] — 2026-07-11
 
 ### Changed

@@ -864,6 +864,22 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
 .import-body p { margin-bottom: 0.75rem; font-size: 0.9rem; }
 .import-actions, .finish-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
 
+.ai-prompt-text {
+  width: 100%;
+  margin-top: 10px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+}
+
 /* Import choice cards */
 .import-choices { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
 .import-choice {
