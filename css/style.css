@@ -46,15 +46,25 @@ body {
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 9999;
-  background: #1F3A72;
-  color: #fff;
+  /* Neon ground with black text — impossible to miss, clearly not production */
+  background: #ccff00;
+  color: #000;
   font-family: var(--font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   text-align: center;
-  padding: 0.25rem 0.5rem;
+  padding: 0.3rem 0.5rem;
   pointer-events: none;
+  animation: staging-pulse 1.3s ease-in-out infinite;
+}
+@keyframes staging-pulse {
+  0%, 100% { background: #ccff00; box-shadow: 0 0 0 rgba(204,255,0,0); }
+  50%      { background: #eaff4d; box-shadow: 0 2px 16px rgba(204,255,0,0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .staging-banner { animation: none; }
 }
 
 body:has(.staging-banner:not(.hidden)) .header { top: 26px; }
