@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.11] — 2026-07-11
+
+### Changed
+- **AI import prompt is now a two-step flow** — the AI first lists recognised books as a flat numbered list so you can pick which to keep, then (after you reply with the numbers) generates a **downloadable** `.json` file rather than pasting it inline.
+
+---
+
 ## [v32.10] — 2026-07-11
 
 ### Added
