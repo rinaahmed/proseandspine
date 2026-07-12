@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v35.0] — 2026-07-12
+
+### Added
+- **"Recommend this book" share card** — a **Share** button on every book card opens a small compose step (your notes, pre-filled and editable) and generates a poster-style card: cover as the hero, a rating-aware header ("Loved this" / "Recommend"), title/author, a reading-status tag ("Finished 2026" / "Currently reading" / "On my list"), your message as a pull-quote, and a Prose & Spine footer. Preview, share, or save the image — reuses the same share sheet as the year-in-books card. Covers render at full quality (fetched fresh through the Worker proxy when online, falling back to the local offline cache).
+
+---
+
 ## [v34.1] — 2026-07-12
 
 ### Fixed

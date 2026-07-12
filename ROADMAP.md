@@ -26,7 +26,6 @@ when they're ready to be worked on._
 - **Filter shelves by tag / format / language** — shelves only have search + sort today; add filtering for a large multi-format/language library. #22
 - **Quick progress update for Currently Reading** — one-tap update of %/page on Reading cards. #23
 - **Tag management** — rename / merge tags across the library. #25
-- **"Recommend this book" share card** — per-book card (title/author/cover) with an editable message prefilled from notes, shared as an image; reuses the year-card share/preview. Caveat: embedding the remote cover needs a Worker proxy or local cover cache (#19). #27
 
 ### Durability / infrastructure
 - **Replace Claude API with a different AI API** — swap the cover-finder Worker's provider (currently `claude-sonnet-4-6` + web search/fetch). Needs a replacement with web-search/fetch (or a separate search API); keep the Worker's `{coverUrl}` contract so the app is unchanged. #26
@@ -42,6 +41,7 @@ _None open._
 
 ## Shipped
 
+- ✅ **"Recommend this book" share card** — #27 — shipped in **v35.0**. A Share button on every book card opens a compose step (notes pre-filled, editable), then generates a poster-style card — cover hero, rating-aware header, title/author, reading-status tag, message pull-quote, footer — through the same share/preview flow as the year card.
 - ✅ **Cache cover thumbnails locally** — #19 — shipped in **v34.0**. Covers are downscaled (~200px) and stored in IndexedDB (DB schema v2, `covers` store); a one-time "Save covers offline" backfill in Settings pulls existing covers through the Worker image-proxy, new covers cache automatically, and rendering prefers the local copy. Unblocks the per-book share card (#27). The optional with/without-images backup toggle is deferred to a follow-up.
 - ✅ **Shareable "Year in books" card** — #24 — shipped in **v33.0–v33.4**. Editorial PNG from Stats (count, pages/best month, languages, highlights), with in-app preview, series collapsed, and a Stats "Highlights" list where you pin up to 5 reads to feature (`featured` flag on the book).
 - ✅ **AI import prompt** — shipped in **v32.10/32.11**. Copyable two-step prompt (numbered list → downloadable JSON) to turn a photo/screenshot of books into an importable file. Supersedes #8 (Audible import) — screenshot Audible and use this instead.

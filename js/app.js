@@ -1,4 +1,4 @@
-import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage, putCover, deleteCover, getAllCovers } from './db.js';
+import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage, putCover, getCover, deleteCover, getAllCovers } from './db.js';
 import { searchBooks, lookupISBN, fetchCoverForBook, fetchCoverViaGoogle, getLastCoverError, fetchImageBlob, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
@@ -262,6 +262,7 @@ function bookCardHTML(book) {
   } else if (book.shelf === 'reading') {
     actionButtons = `<button class="card-action-btn primary" data-action="finish" data-id="${book.id}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Finished</button>`;
   }
+  actionButtons += `<button class="card-action-btn secondary" data-action="share" data-id="${book.id}" aria-label="Share ${escape(book.title)}"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.5"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.5"/><path d="M4.6 6.1L9.4 3.9M4.6 7.9L9.4 10.1" stroke="currentColor" stroke-width="1.5"/></svg> Share</button>`;
 
   return `
     <article class="book-card" data-id="${book.id}" data-action="edit" role="button" tabindex="0" aria-label="Edit ${escape(book.title)}">
@@ -685,28 +686,226 @@ function drawShareCard(d) {
   return cv;
 }
 
+// ─── Per-book "recommend this book" share card ─────────────────────────────────
+
+function roundedRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+// Word-wrap text to a max width and line count, ellipsising the last line if
+// there's leftover text. `ctx.font` must already be set to the target font.
+function wrapLines(ctx, text, maxWidth, maxLines) {
+  const words = (text || '').trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  let i = 0;
+  for (; i < words.length; i++) {
+    const test = cur ? cur + ' ' + words[i] : words[i];
+    if (!cur || ctx.measureText(test).width <= maxWidth) {
+      cur = test;
+    } else {
+      lines.push(cur);
+      cur = words[i];
+      if (lines.length === maxLines) break;
+    }
+  }
+  const consumedAll = i >= words.length;
+  if (lines.length < maxLines) { if (cur) lines.push(cur); }
+  const truncated = !consumedAll || lines.length > maxLines;
+  if (truncated && lines.length) {
+    let last = lines[maxLines - 1] || lines[lines.length - 1];
+    while (last.length && ctx.measureText(last + '…').width > maxWidth) last = last.slice(0, -1);
+    lines[lines.length - 1] = last.replace(/\s+$/, '') + '…';
+  }
+  return lines.slice(0, maxLines);
+}
+
+// A short rating-aware line for the card's header.
+function shareHeaderText(rating) {
+  return rating >= 5 ? 'Loved this' : 'Recommend';
+}
+
+// A small status pill: reading progress or when it was finished.
+function shareStatusTag(book) {
+  if (book.shelf === 'reading') return 'Currently reading';
+  if (book.shelf === 'read') return book.dateFinished ? `Finished ${book.dateFinished.slice(0, 4)}` : 'Finished';
+  return 'On my list';
+}
+
+// Get an untainted, drawable bitmap for the cover: try a fresh full-res fetch
+// through the Worker proxy first (best quality), fall back to the local
+// (downscaled) cache when offline or the fetch fails.
+async function loadCoverBitmapForShare(book) {
+  let blob = book.thumbnail ? await fetchImageBlob(book.thumbnail).catch(() => null) : null;
+  if (!blob) {
+    try {
+      const cached = await getCover(book.id);
+      blob = cached?.blob || null;
+    } catch { /* offline / no cache */ }
+  }
+  if (!blob) return null;
+  try { return await createImageBitmap(blob); } catch { return null; }
+}
+
+// Draws a portrait "recommend this book" poster: cover as the hero, a
+// rating-aware header, title/author, an optional message pull-quote, footer.
+async function drawBookCard(book, message) {
+  const S = 3;
+  const W = 400, P = 28;
+  const C = { cream: '#F7F5EF', ink: '#2A4B8D', text: '#20232C', sub: '#6A6F7A', faint: '#9096A2', line: '#EFEBE0' };
+  const SERIF = "'Spectral', Georgia, serif";
+  const SANS = "'Public Sans', system-ui, sans-serif";
+  // Measure with a throwaway context first — font metrics don't depend on the
+  // canvas's pixel size, so this lets us compute the final height up front.
+  const mcv = document.createElement('canvas');
+  const ctxM = mcv.getContext('2d');
+
+  ctxM.font = `600 22px ${SERIF}`;
+  const titleLines = wrapLines(ctxM, book.title || '', W - P * 2, 2);
+
+  ctxM.font = `italic 400 15px ${SERIF}`;
+  const msgLines = message ? wrapLines(ctxM, message, W - P * 2 - 16, 4) : [];
+
+  const coverH = 440;
+  let y = coverH + 26;
+  y += 20 + 12;                        // status pill
+  y += 14 + 8;                         // rating-aware header
+  y += titleLines.length * 28 + 10;    // title
+  y += 18;                             // author
+  if (msgLines.length) y += 16 + msgLines.length * 22;
+  const H = y + 44;                    // footer
+
+  const cv = document.createElement('canvas');
+  cv.width = W * S; cv.height = Math.round(H * S);
+  const ctx = cv.getContext('2d');
+  ctx.scale(S, S);
+  ctx.textBaseline = 'alphabetic';
+  const ell = (s, max) => { if (ctx.measureText(s).width <= max) return s; let t = s; while (t.length && ctx.measureText(t + '…').width > max) t = t.slice(0, -1); return t.replace(/\s+$/, '') + '…'; };
+
+  ctx.fillStyle = C.cream; ctx.fillRect(0, 0, W, H);
+
+  // Cover — object-fit: cover, cropped to the top band
+  const bitmap = await loadCoverBitmapForShare(book);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, W, coverH); ctx.clip();
+  if (bitmap) {
+    const scale = Math.max(W / bitmap.width, coverH / bitmap.height);
+    const dw = bitmap.width * scale, dh = bitmap.height * scale;
+    ctx.drawImage(bitmap, (W - dw) / 2, (coverH - dh) / 2, dw, dh);
+    bitmap.close?.();
+  } else {
+    ctx.fillStyle = COVER_PALETTE[(book.id || 0) % COVER_PALETTE.length];
+    ctx.fillRect(0, 0, W, coverH);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `600 120px ${SERIF}`; ctx.textAlign = 'center';
+    ctx.fillText((book.title || '?')[0].toUpperCase(), W / 2, coverH / 2 + 40);
+  }
+  // Soft seam so the cover blends into the panel below it
+  const seam = ctx.createLinearGradient(0, coverH - 60, 0, coverH);
+  seam.addColorStop(0, 'rgba(247,245,239,0)'); seam.addColorStop(1, C.cream);
+  ctx.fillStyle = seam; ctx.fillRect(0, coverH - 60, W, 60);
+  ctx.restore();
+
+  let ty = coverH + 26;
+
+  // Status pill
+  const tag = shareStatusTag(book).toUpperCase();
+  ctx.font = `700 10px ${SANS}`;
+  const tagW = ctx.measureText(tag).width + 16;
+  ctx.fillStyle = C.ink;
+  roundedRectPath(ctx, P, ty, tagW, 20, 10); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+  ctx.fillText(tag, P + 8, ty + 14);
+  ty += 20 + 12;
+
+  // Rating-aware header
+  ctx.fillStyle = C.ink; ctx.font = `700 12px ${SANS}`;
+  ctx.fillText(shareHeaderText(book.rating).toUpperCase(), P, ty + 11);
+  ty += 14 + 8;
+
+  // Title
+  ctx.fillStyle = C.text; ctx.font = `600 22px ${SERIF}`;
+  for (const line of titleLines) { ctx.fillText(line, P, ty + 18); ty += 28; }
+  ty += 10;
+
+  // Author
+  ctx.fillStyle = C.sub; ctx.font = `400 14px ${SANS}`;
+  ctx.fillText(ell(book.author || '', W - P * 2), P, ty + 14);
+  ty += 18;
+
+  // Message pull-quote
+  if (msgLines.length) {
+    ty += 16;
+    ctx.fillStyle = C.line;
+    ctx.fillRect(P, ty - 12, 3, msgLines.length * 22 + 6);
+    ctx.fillStyle = C.text; ctx.font = `italic 400 15px ${SERIF}`;
+    for (const line of msgLines) { ctx.fillText(line, P + 16, ty); ty += 22; }
+  }
+
+  // Footer
+  ty = H - 30;
+  ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P, ty); ctx.lineTo(W - P, ty); ctx.stroke();
+  ctx.fillStyle = C.faint; ctx.font = `600 12px ${SERIF}`; ctx.textAlign = 'left';
+  ctx.fillText('Prose & Spine', P, ty + 18);
+
+  return cv;
+}
+
+let _pendingShareBookId = null;
+
+function openShareBookModal(book) {
+  _pendingShareBookId = book.id;
+  document.getElementById('share-book-message').value = book.notes || '';
+  document.getElementById('share-book-modal').classList.remove('hidden');
+}
+
+function closeShareBookModal() {
+  document.getElementById('share-book-modal').classList.add('hidden');
+  _pendingShareBookId = null;
+}
+
+async function confirmShareBook() {
+  const book = state.books.find(b => b.id === _pendingShareBookId);
+  closeShareBookModal();
+  if (!book) return;
+  const message = document.getElementById('share-book-message').value.trim();
+  try { await document.fonts.ready; } catch {}
+  const canvas = await drawBookCard(book, message);
+  const safe = (book.title || 'book').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'book';
+  await presentShareCard(canvas, `prose-and-spine-${safe}.png`, 'Share this book');
+}
+
 let _shareFile = null;
 let _shareUrl = null;
 
-// Render the card and show it in a preview modal so the user sees it first.
-async function shareYearCard() {
-  const d = buildShareYear();
-  if (!d.count) { alert('No finished books in this year yet — nothing to share.'); return; }
-  try { await document.fonts.ready; } catch {}
-  const canvas = drawShareCard(d);
+// Turn a drawn card into a File, wire it into the (generic) preview modal,
+// and show it — shared by the year card and the per-book share card.
+async function presentShareCard(canvas, filename, title) {
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   if (!blob) { alert('Could not create the image.'); return; }
 
   if (_shareUrl) URL.revokeObjectURL(_shareUrl);
-  _shareFile = new File([blob], `prose-and-spine-${d.year}.png`, { type: 'image/png' });
+  _shareFile = new File([blob], filename, { type: 'image/png' });
   _shareUrl = URL.createObjectURL(blob);
   document.getElementById('share-preview-img').src = _shareUrl;
+  if (title) document.getElementById('share-preview-title').textContent = title;
 
   // Only show the native Share button when the platform can share the file
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [_shareFile] }));
   document.getElementById('share-preview-share').style.display = canShare ? '' : 'none';
 
   document.getElementById('share-preview-modal').classList.remove('hidden');
+}
+
+// Render the year card and show it in the preview modal.
+async function shareYearCard() {
+  const d = buildShareYear();
+  if (!d.count) { alert('No finished books in this year yet — nothing to share.'); return; }
+  try { await document.fonts.ready; } catch {}
+  const canvas = drawShareCard(d);
+  await presentShareCard(canvas, `prose-and-spine-${d.year}.png`, 'Your year in books');
 }
 
 async function shareCurrentCard() {
@@ -1600,6 +1799,11 @@ function bindEvents() {
   document.getElementById('share-preview-close')?.addEventListener('click', closeSharePreview);
   document.getElementById('share-preview-modal')?.querySelector('.modal-overlay').addEventListener('click', closeSharePreview);
 
+  document.getElementById('share-book-preview')?.addEventListener('click', confirmShareBook);
+  document.getElementById('share-book-cancel')?.addEventListener('click', closeShareBookModal);
+  document.getElementById('share-book-close')?.addEventListener('click', closeShareBookModal);
+  document.getElementById('share-book-modal')?.querySelector('.modal-overlay').addEventListener('click', closeShareBookModal);
+
   document.getElementById('btn-ai-prompt')?.addEventListener('click', () => {
     document.getElementById('ai-prompt-modal').classList.remove('hidden');
   });
@@ -1775,6 +1979,11 @@ function bindEvents() {
         if (book) { await updateBook({ ...book, shelf: 'reading', dateStarted: book.dateStarted || today() }); await refreshBooks(); }
         return;
       }
+      if (action === 'share') {
+        const book = state.books.find(b => b.id === id);
+        if (book) openShareBookModal(book);
+        return;
+      }
     }
     // Tap anywhere on card → edit
     const card = e.target.closest('.book-card[data-action="edit"]');
@@ -1829,6 +2038,7 @@ function bindEvents() {
     else if (!document.getElementById('book-modal').classList.contains('hidden')) closeBookModal();
     else if (!document.getElementById('finish-modal').classList.contains('hidden')) closeFinishModal();
     else if (!document.getElementById('settings-modal').classList.contains('hidden')) closeSettings();
+    else if (!document.getElementById('share-book-modal').classList.contains('hidden')) closeShareBookModal();
   });
 }
 

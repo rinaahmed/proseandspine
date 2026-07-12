@@ -1,4 +1,4 @@
-const CACHE = 'proseandspine-v34.1';
+const CACHE = 'proseandspine-v35.0';
 
 const APP_SHELL = [
   '/',
