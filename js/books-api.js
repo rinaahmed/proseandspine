@@ -199,6 +199,20 @@ export async function fetchCoverForBook({ title, author }) {
   return await fetchCoverViaWorker(title, author);
 }
 
+// Fetch cover via Google Books (no AI credits needed): ISBN lookup, then
+// title/author search; falls back to Open Library through those helpers.
+export async function fetchCoverViaGoogle({ title, author, isbn }) {
+  if (isbn) {
+    const book = await lookupISBN(isbn);
+    if (book?.thumbnail) return book.thumbnail;
+  }
+  if (title) {
+    const { results } = await searchBooks(`${title} ${author || ''}`.trim(), 1);
+    if (results[0]?.thumbnail) return results[0].thumbnail;
+  }
+  return null;
+}
+
 export async function detectBarcodeFromVideoFrame(videoEl) {
   if (!('BarcodeDetector' in window)) return null;
   try {

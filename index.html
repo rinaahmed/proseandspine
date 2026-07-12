@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
   <div id="staging-banner" class="staging-banner hidden" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v33.4
+    ⚠ STAGING &nbsp;·&nbsp; v33.6
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v33.4</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v33.6</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
         <!-- equalizer / filter icon -->
         <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -179,10 +179,17 @@
             <span class="cover-option-label">Current</span>
           </button>
           <button type="button" class="cover-option hidden" id="cover-opt-claude" data-source="claude">
-            <img id="cover-opt-claude-img" class="cover-option-thumb" alt="Claude cover">
-            <span class="cover-option-label">Claude</span>
+            <img id="cover-opt-claude-img" class="cover-option-thumb" alt="Found cover">
+            <span class="cover-option-label" id="cover-opt-claude-label">Found</span>
           </button>
-          <button type="button" id="btn-find-cover-claude" class="btn btn-secondary cover-find-btn">Find cover with Claude</button>
+          <div class="cover-find-btns">
+            <button type="button" id="btn-find-cover-google" class="btn btn-secondary cover-find-btn">Find (Google)</button>
+            <button type="button" id="btn-find-cover-claude" class="btn btn-secondary cover-find-btn">Find (Claude)</button>
+          </div>
+        </div>
+        <div class="cover-url-row">
+          <input type="url" id="cover-url-input" class="cover-url-input" placeholder="…or paste an image URL" autocomplete="off" inputmode="url">
+          <button type="button" id="btn-cover-url-apply" class="btn btn-secondary">Use</button>
         </div>
         <p id="cover-picker-status" class="cover-picker-status hidden" aria-live="polite"></p>
       </div>
@@ -436,8 +443,22 @@
               </svg>
             </div>
             <div class="settings-row-text">
-              <span class="settings-row-title">Fetch missing covers</span>
-              <span class="settings-row-sub">Fill in books with no cover image</span>
+              <span class="settings-row-title">Fetch missing covers (Claude)</span>
+              <span class="settings-row-sub">Web search for books with no cover — uses AI credits</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
+          <button class="settings-row" id="btn-fetch-covers-google">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="14" height="12" rx="2"/>
+                <circle cx="6.5" cy="7.5" r="1.5"/>
+                <path d="M2 12l3.5-3 3 3 2.5-2.5 5 4.5"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Fetch missing covers (Google)</span>
+              <span class="settings-row-sub">Free — Google Books / Open Library, no AI credits</span>
             </div>
             <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
           </button>
@@ -461,7 +482,7 @@
       <div>
         <div class="settings-group-label">About</div>
         <div class="settings-group">
-          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v33.4</p>
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v33.6</p>
         </div>
       </div>
 
@@ -647,7 +668,7 @@ Name the file something like prose-and-spine-import.json.</textarea>
 
 <script>
 (async () => {
-  const V = '33.4';
+  const V = '33.6';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);

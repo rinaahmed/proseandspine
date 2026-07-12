@@ -1,5 +1,5 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
-import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
+import { searchBooks, lookupISBN, fetchCoverForBook, fetchCoverViaGoogle, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -887,9 +887,12 @@ function initCoverPicker(book) {
   status.classList.add('hidden');
   status.classList.remove('is-error');
   status.textContent = '';
-  const btn = document.getElementById('btn-find-cover-claude');
-  btn.disabled = false;
-  btn.textContent = 'Find cover with Claude';
+  const btnC = document.getElementById('btn-find-cover-claude');
+  const btnG = document.getElementById('btn-find-cover-google');
+  btnC.disabled = false; btnC.textContent = 'Find (Claude)';
+  btnG.disabled = false; btnG.textContent = 'Find (Google)';
+  const urlInput = document.getElementById('cover-url-input');
+  if (urlInput) urlInput.value = '';
 }
 
 function selectCover(which) { // 'current' | 'claude'
@@ -910,11 +913,26 @@ function selectCover(which) { // 'current' | 'claude'
   }
 }
 
-async function findCoverWithClaude() {
+// Show a found cover in the "found" slot and select it.
+function setFoundCover(url, source, label) {
+  const opt = document.getElementById('cover-opt-claude');
+  document.getElementById('cover-opt-claude-img').src = url;
+  document.getElementById('cover-opt-claude-label').textContent = label;
+  opt.dataset.src = url;
+  opt.dataset.source = source;
+  opt.classList.remove('hidden');
+  selectCover('claude');
+}
+
+// source: 'claude' (web search, credits) | 'google' (Google Books, free)
+async function findCover(source) {
   const title = document.getElementById('field-title').value.trim();
   const author = document.getElementById('field-author').value.trim();
   const status = document.getElementById('cover-picker-status');
-  const btn = document.getElementById('btn-find-cover-claude');
+  const btnC = document.getElementById('btn-find-cover-claude');
+  const btnG = document.getElementById('btn-find-cover-google');
+  const btn = source === 'google' ? btnG : btnC;
+  const baseLabel = source === 'google' ? 'Find (Google)' : 'Find (Claude)';
 
   if (!title) {
     status.classList.remove('hidden');
@@ -923,31 +941,44 @@ async function findCoverWithClaude() {
     return;
   }
 
-  btn.disabled = true;
+  btnC.disabled = true; btnG.disabled = true;
   btn.textContent = 'Searching…';
   status.classList.remove('hidden', 'is-error');
-  status.textContent = 'Searching the web for a cover… (~15–30s)';
+  status.textContent = source === 'google'
+    ? 'Searching Google Books…'
+    : 'Searching the web for a cover… (~15–30s)';
 
-  const url = await fetchCoverForBook({ title, author });
+  const url = source === 'google'
+    ? await fetchCoverViaGoogle({ title, author })
+    : await fetchCoverForBook({ title, author });
+
+  btnC.disabled = false; btnG.disabled = false;
+  btn.textContent = baseLabel;
 
   if (url) {
-    const claudeImg = document.getElementById('cover-opt-claude-img');
-    claudeImg.src = url;
-    const claudeOpt = document.getElementById('cover-opt-claude');
-    claudeOpt.dataset.src = url;
-    claudeOpt.classList.remove('hidden');
-    selectCover('claude');
+    setFoundCover(url, source, source === 'google' ? 'Google' : 'Claude');
     status.classList.add('hidden');
     status.textContent = '';
-    btn.disabled = false;
-    btn.textContent = 'Find again';
   } else {
     status.classList.remove('hidden');
     status.classList.add('is-error');
-    status.textContent = getLastCoverError() || 'No cover found.';
-    btn.disabled = false;
-    btn.textContent = 'Try again';
+    status.textContent = (source === 'claude' && getLastCoverError()) || 'No cover found — try the other source, a different title, or paste a URL.';
   }
+}
+
+// Manually apply a pasted image URL as the cover.
+function applyCoverUrl() {
+  const input = document.getElementById('cover-url-input');
+  const url = input.value.trim();
+  const status = document.getElementById('cover-picker-status');
+  if (!/^https?:\/\/\S+/i.test(url)) {
+    status.classList.remove('hidden'); status.classList.add('is-error');
+    status.textContent = 'Enter a valid image URL (https://…).';
+    return;
+  }
+  setFoundCover(url, 'manual', 'Pasted');
+  input.value = '';
+  status.classList.add('hidden'); status.classList.remove('is-error'); status.textContent = '';
 }
 
 function onQSInput() {
@@ -1262,7 +1293,8 @@ let _coverFetchAbort = false;
 const COVER_DONE = new Set(['claude', 'manual', 'existing']);
 
 // mode: 'missing' (no cover) | 'refresh' (not yet Claude-done) | 'force' (every book)
-async function fetchMissingCovers(books, mode = 'missing') {
+// source: 'claude' (web search, uses AI credits) | 'google' (Google Books, free)
+async function fetchMissingCovers(books, mode = 'missing', source = 'claude') {
   let targets;
   if (mode === 'force') targets = books.slice();
   else if (mode === 'refresh') targets = books.filter(b => !COVER_DONE.has(b.coverSource));
@@ -1298,15 +1330,14 @@ async function fetchMissingCovers(books, mode = 'missing') {
     const book = targets[i];
     bannerText.textContent = `${verb} covers… ${i + 1} / ${targets.length}`;
 
-    const coverUrl = await fetchCoverForBook({
-      title: book.title,
-      author: book.author,
-      isbn: book.isbn,
-    });
+    const coverUrl = source === 'google'
+      ? await fetchCoverViaGoogle({ title: book.title, author: book.author, isbn: book.isbn })
+      : await fetchCoverForBook({ title: book.title, author: book.author, isbn: book.isbn });
 
     if (coverUrl) {
-      // Store the cover and mark it Claude-done so future refreshes skip it
-      await updateBook({ ...book, thumbnail: coverUrl, coverSource: 'claude' });
+      // Google covers are marked 'google' (a later Claude refresh can still upgrade
+      // them); Claude covers are marked 'claude' so refreshes skip them.
+      await updateBook({ ...book, thumbnail: coverUrl, coverSource: source === 'google' ? 'google' : 'claude' });
       found++;
       state.books = await getAllBooks();
     } else {
@@ -1314,7 +1345,7 @@ async function fetchMissingCovers(books, mode = 'missing') {
     }
 
     // Small delay between requests
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, source === 'google' ? 250 : 500));
   }
 
   await refreshBooks();
@@ -1502,7 +1533,13 @@ function bindEvents() {
   // Fetch missing covers (only books with no cover)
   document.getElementById('btn-fetch-covers')?.addEventListener('click', () => {
     closeSettings();
-    fetchMissingCovers(state.books, 'missing');
+    fetchMissingCovers(state.books, 'missing', 'claude');
+  });
+
+  // Fetch missing covers via Google Books (free, no AI credits)
+  document.getElementById('btn-fetch-covers-google')?.addEventListener('click', () => {
+    closeSettings();
+    fetchMissingCovers(state.books, 'missing', 'google');
   });
 
   // Refresh new covers (only books not yet done by Claude — skips finished ones)
@@ -1561,7 +1598,9 @@ function bindEvents() {
   document.getElementById('qs-camera-close').addEventListener('click', stopCamera);
 
   // Cover picker
-  document.getElementById('btn-find-cover-claude')?.addEventListener('click', findCoverWithClaude);
+  document.getElementById('btn-find-cover-claude')?.addEventListener('click', () => findCover('claude'));
+  document.getElementById('btn-find-cover-google')?.addEventListener('click', () => findCover('google'));
+  document.getElementById('btn-cover-url-apply')?.addEventListener('click', applyCoverUrl);
   document.getElementById('cover-opt-current')?.addEventListener('click', () => selectCover('current'));
   document.getElementById('cover-opt-claude')?.addEventListener('click', () => selectCover('claude'));
 

@@ -1273,8 +1273,17 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
   color: var(--text2);
 }
 .cover-option.selected .cover-option-label { color: var(--accent); background: var(--accent-tint); }
+.cover-find-btns { display: flex; flex-direction: column; gap: 6px; }
 .cover-find-btn { padding: 8px 12px; font-size: 0.8rem; white-space: nowrap; }
 .cover-find-btn:disabled { opacity: 0.6; cursor: default; }
+.cover-url-row { display: flex; gap: 6px; margin-top: 10px; }
+.cover-url-input {
+  flex: 1; min-width: 0;
+  padding: 8px 10px; font-size: 0.82rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text);
+}
+.cover-url-row .btn { padding: 8px 12px; font-size: 0.8rem; }
 .cover-picker-status { font-size: 0.78rem; color: var(--text2); margin-top: 8px; }
 .cover-picker-status.is-error { color: var(--danger); }
 .cover-picker-status.hidden { display: none; }
