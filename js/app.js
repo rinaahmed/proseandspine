@@ -895,15 +895,38 @@ function closeSettings() {
   document.getElementById('settings-modal').classList.add('hidden');
 }
 
+function backupJSON() {
+  return JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), books: state.books }, null, 2);
+}
+
 function exportData() {
-  const data = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), books: state.books }, null, 2);
-  const blob = new Blob([data], { type: 'application/json' });
+  const blob = new Blob([backupJSON()], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = `proseandspine-${today()}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// One-tap backup: open the OS share sheet so the user can save the file to
+// OneDrive / iCloud Drive / etc. Falls back to a plain download when the Web
+// Share API (with files) isn't available.
+async function backupToCloud() {
+  const file = new File([backupJSON()], `proseandspine-${today()}.json`, { type: 'application/json' });
+  // Share ONLY the file — adding title/text makes iOS present a text/message
+  // share (Messages, Mail) instead of a document share, which hides OneDrive,
+  // iCloud Drive and "Save to Files".
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user dismissed the share sheet
+      // any other error: fall through to a plain download
+    }
+  }
+  exportData();
 }
 
 function handleImportFile(e) {
@@ -1117,6 +1140,7 @@ function bindEvents() {
   document.getElementById('settings-modal').querySelector('.modal-overlay').addEventListener('click', closeSettings);
 
   // Export / Import
+  document.getElementById('btn-backup-cloud')?.addEventListener('click', backupToCloud);
   document.getElementById('btn-export').addEventListener('click', exportData);
   document.getElementById('btn-import').addEventListener('click', () => document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change', handleImportFile);

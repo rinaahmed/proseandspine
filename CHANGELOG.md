@@ -4,6 +4,20 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.5] — 2026-07-11
+
+### Fixed
+- **"Back up to cloud" now shows OneDrive / Save to Files** (#16) — the share sheet was passing title/text, which made iOS present a text/message share (hiding storage apps). Now it shares only the file, so OneDrive, iCloud Drive, and "Save to Files" appear.
+
+---
+
+## [v32.4] — 2026-07-11
+
+### Added
+- **One-tap "Back up to cloud"** (#16) — Settings → *Back up to cloud* opens the OS share sheet so you can save your library straight to OneDrive, iCloud Drive, or Files. Falls back to a normal download where the share sheet isn't available. Restore is via the existing Import. (Automatic backup is tracked separately.)
+
+---
+
 ## [v32.3] — 2026-07-11
 
 ### Fixed
