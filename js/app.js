@@ -1303,14 +1303,19 @@ async function confirmImport(mode) {
 // Rendering prefers these over the remote thumbnail so covers work offline and
 // don't hammer remote CDNs.
 const _coverURLs = new Map();
+// bookId → the remote thumbnail URL the cached cover was fetched from (null =
+// unknown source, e.g. from before this tracking existed — treated as current
+// so we don't needlessly re-fetch it).
+const _coverSrcUrls = new Map();
 let _cacheCoversAbort = false;
 
 // Load every cached cover blob into memory as object URLs (called once on init).
 async function loadCachedCovers() {
   try {
     const map = await getAllCovers();
-    for (const [id, blob] of map) {
-      _coverURLs.set(id, URL.createObjectURL(blob));
+    for (const [id, entry] of map) {
+      _coverURLs.set(id, URL.createObjectURL(entry.blob));
+      _coverSrcUrls.set(id, entry.url);
     }
   } catch { /* cache is best-effort */ }
 }
@@ -1341,16 +1346,27 @@ async function cacheCoverForBook(book) {
   const blob = await fetchImageBlob(book.thumbnail);
   if (!blob) return false;
   const small = await downscaleToBlob(blob);
-  await putCover(book.id, small);
+  await putCover(book.id, small, book.thumbnail);
   const old = _coverURLs.get(book.id);
   if (old) URL.revokeObjectURL(old);
   _coverURLs.set(book.id, URL.createObjectURL(small));
+  _coverSrcUrls.set(book.id, book.thumbnail);
   return true;
 }
 
-// One-time backfill: cache every book that has a remote cover but no local copy.
+// A book needs (re-)caching if it has no local copy yet, or its cached copy
+// was fetched from a different URL (the cover was replaced since).
+function needsCaching(book) {
+  if (!book.thumbnail) return false;
+  if (!_coverURLs.has(book.id)) return true;
+  const cachedUrl = _coverSrcUrls.get(book.id);
+  return cachedUrl != null && cachedUrl !== book.thumbnail;
+}
+
+// Backfill: cache every book that's missing a local cover, or whose cover was
+// replaced since it was last cached. Already-current covers are left alone.
 async function cacheAllCovers() {
-  const targets = state.books.filter(b => b.thumbnail && !_coverURLs.has(b.id));
+  const targets = state.books.filter(needsCaching);
   const banner = document.getElementById('cover-fetch-banner');
   const bannerText = document.getElementById('cover-fetch-text');
   const setBannerStatus = (s) => {
@@ -1561,7 +1577,10 @@ function bindEvents() {
   document.getElementById('btn-settings').addEventListener('click', openSettings);
 
   // Persistent storage — tap to (re)request and refresh the status line
-  document.getElementById('btn-cache-covers')?.addEventListener('click', cacheAllCovers);
+  document.getElementById('btn-cache-covers')?.addEventListener('click', () => {
+    closeSettings();
+    cacheAllCovers();
+  });
 
   document.getElementById('btn-persist')?.addEventListener('click', async () => {
     await ensurePersistentStorage();
@@ -1723,6 +1742,7 @@ function bindEvents() {
     // Drop any locally-cached cover for this book.
     const url = _coverURLs.get(id);
     if (url) { URL.revokeObjectURL(url); _coverURLs.delete(id); }
+    _coverSrcUrls.delete(id);
     deleteCover(id).catch(() => {});
     closeBookModal();
     await refreshBooks();
