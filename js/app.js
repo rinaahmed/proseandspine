@@ -774,7 +774,7 @@ async function drawBookCard(book, message) {
   y += 20 + 12;                         // status pill
   y += 14 + 8;                          // rating-aware header
   y += titleLines.length * 32 + 12;     // title
-  y += 20;                              // author
+  y += 28;                              // author
   if (msgLines.length) y += 12 + 6 + msgLines.length * 22 + 14; // "MY THOUGHTS" label + message
   const H = y + 44;                     // footer
 
@@ -846,7 +846,7 @@ async function drawBookCard(book, message) {
   // Author
   ctx.fillStyle = C.author; ctx.font = `600 15px ${SANS}`;
   ctx.fillText(ell(book.author || '', W - P * 2), P, ty + 14);
-  ty += 20;
+  ty += 28;
 
   // Message — clearly labelled as the reader's own note, not a book blurb
   if (msgLines.length) {

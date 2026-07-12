@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v35.3] — 2026-07-12
+
+### Fixed
+- **Book share card: "MY THOUGHTS" label sat right on top of the author line** — added breathing room between the author and the message section.
+
+---
+
 ## [v35.2] — 2026-07-12
 
 ### Changed
