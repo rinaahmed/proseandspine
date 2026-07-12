@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v35.2] — 2026-07-12
+
+### Changed
+- **Book share card refinements** — the message is now labelled "MY THOUGHTS" and set in a plain (non-italic) style so it reads as your own note rather than a quote from the book; title and author are larger and bolder for more visual weight; the cover is drawn smaller so the whole card sits closer to a square instead of a tall strip.
+
+---
+
 ## [v35.1] — 2026-07-12
 
 ### Fixed

@@ -755,7 +755,7 @@ async function loadCoverBitmapForShare(book) {
 async function drawBookCard(book, message) {
   const S = 3;
   const W = 400, P = 28;
-  const C = { cream: '#F7F5EF', ink: '#2A4B8D', text: '#20232C', sub: '#6A6F7A', faint: '#9096A2', line: '#EFEBE0' };
+  const C = { cream: '#F7F5EF', ink: '#2A4B8D', text: '#20232C', author: '#454C59', sub: '#6A6F7A', faint: '#9096A2', line: '#EFEBE0' };
   const SERIF = "'Spectral', Georgia, serif";
   const SANS = "'Public Sans', system-ui, sans-serif";
   // Measure with a throwaway context first — font metrics don't depend on the
@@ -763,20 +763,20 @@ async function drawBookCard(book, message) {
   const mcv = document.createElement('canvas');
   const ctxM = mcv.getContext('2d');
 
-  ctxM.font = `600 22px ${SERIF}`;
+  ctxM.font = `700 26px ${SERIF}`;
   const titleLines = wrapLines(ctxM, book.title || '', W - P * 2, 2);
 
-  ctxM.font = `italic 400 15px ${SERIF}`;
+  ctxM.font = `400 15px ${SERIF}`;
   const msgLines = message ? wrapLines(ctxM, message, W - P * 2 - 16, 4) : [];
 
-  const coverBoxH = 360, coverTop = 24;
-  let y = coverTop + coverBoxH + 26;
-  y += 20 + 12;                        // status pill
-  y += 14 + 8;                         // rating-aware header
-  y += titleLines.length * 28 + 10;    // title
-  y += 18;                             // author
-  if (msgLines.length) y += 16 + msgLines.length * 22;
-  const H = y + 44;                    // footer
+  const coverBoxH = 250, coverTop = 20;
+  let y = coverTop + coverBoxH + 22;
+  y += 20 + 12;                         // status pill
+  y += 14 + 8;                          // rating-aware header
+  y += titleLines.length * 32 + 12;     // title
+  y += 20;                              // author
+  if (msgLines.length) y += 12 + 6 + msgLines.length * 22 + 14; // "MY THOUGHTS" label + message
+  const H = y + 44;                     // footer
 
   const cv = document.createElement('canvas');
   cv.width = W * S; cv.height = Math.round(H * S);
@@ -821,7 +821,7 @@ async function drawBookCard(book, message) {
   }
   ctx.restore();
 
-  let ty = coverTop + coverBoxH + 26;
+  let ty = coverTop + coverBoxH + 22;
 
   // Status pill
   const tag = shareStatusTag(book).toUpperCase();
@@ -838,23 +838,26 @@ async function drawBookCard(book, message) {
   ctx.fillText(shareHeaderText(book.rating).toUpperCase(), P, ty + 11);
   ty += 14 + 8;
 
-  // Title
-  ctx.fillStyle = C.text; ctx.font = `600 22px ${SERIF}`;
-  for (const line of titleLines) { ctx.fillText(line, P, ty + 18); ty += 28; }
-  ty += 10;
+  // Title — the hero text element, larger and bolder than the rest
+  ctx.fillStyle = C.text; ctx.font = `700 26px ${SERIF}`;
+  for (const line of titleLines) { ctx.fillText(line, P, ty + 21); ty += 32; }
+  ty += 12;
 
   // Author
-  ctx.fillStyle = C.sub; ctx.font = `400 14px ${SANS}`;
+  ctx.fillStyle = C.author; ctx.font = `600 15px ${SANS}`;
   ctx.fillText(ell(book.author || '', W - P * 2), P, ty + 14);
-  ty += 18;
+  ty += 20;
 
-  // Message pull-quote
+  // Message — clearly labelled as the reader's own note, not a book blurb
   if (msgLines.length) {
-    ty += 16;
+    ctx.fillStyle = C.faint; ctx.font = `700 10px ${SANS}`;
+    ctx.fillText('MY THOUGHTS', P, ty + 9);
+    ty += 12 + 6;
     ctx.fillStyle = C.line;
-    ctx.fillRect(P, ty - 12, 3, msgLines.length * 22 + 6);
-    ctx.fillStyle = C.text; ctx.font = `italic 400 15px ${SERIF}`;
-    for (const line of msgLines) { ctx.fillText(line, P + 16, ty); ty += 22; }
+    ctx.fillRect(P, ty - 4, 3, msgLines.length * 22 + 2);
+    ctx.fillStyle = C.text; ctx.font = `400 15px ${SERIF}`;
+    for (const line of msgLines) { ctx.fillText(line, P + 16, ty + 12); ty += 22; }
+    ty += 14;
   }
 
   // Footer
