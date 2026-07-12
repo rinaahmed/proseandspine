@@ -29,6 +29,7 @@ when they're ready to be worked on._
 - **Tag management** — rename / merge tags across the library. #25
 
 ### Durability / infrastructure
+- **Replace Claude API with a different AI API** — swap the cover-finder Worker's provider (currently `claude-sonnet-4-6` + web search/fetch). Needs a replacement with web-search/fetch (or a separate search API); keep the Worker's `{coverUrl}` contract so the app is unchanged. #26
 - **Cache cover thumbnails locally** — covers are remote URLs today (slow loads, break when URLs rot). Store downscaled thumbnails in IndexedDB for instant/offline covers. Needs a Worker image-proxy (CORS) + a backup with/without-images toggle. #19
 - **Automatic cloud backup to OneDrive** — hands-off backup via Microsoft Graph (auto-write to the user's OneDrive, one-tap restore on a new device). Follow-on to the one-tap share backup. Needs Azure app + OAuth. #18
 
