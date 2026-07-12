@@ -4,6 +4,14 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.3] — 2026-07-11
+
+### Changed
+- **Year card: highlights no longer silently dropped** — the previous 5-item cap combined with "spread across the year" could omit meaningful reads (e.g. a collapsed series). Now shows up to 8 highlights, so on a normal reading year nothing is cut; the selection is fully deterministic.
+- **Removed the Avg rating stat** (little value); the stat row now shows Pages and/or Best month, plus Languages.
+
+---
+
 ## [v33.2] — 2026-07-11
 
 ### Changed

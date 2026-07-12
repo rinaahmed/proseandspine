@@ -467,8 +467,6 @@ function buildShareYear() {
   const y = (state.statsYear && state.statsYear !== 'all') ? state.statsYear : cur;
   const inYear = readBooks.filter(b => yearOf(b) === y);
 
-  const rated = inYear.filter(b => b.rating);
-  const avg = rated.length ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1) : null;
   const langList = [...new Set(inYear.map(b => b.language || 'en'))]
     .map(c => LANG_SHORT[c] || c.toUpperCase()).join(' · ');
 
@@ -498,7 +496,10 @@ function buildShareYear() {
     groups.set(k, g);
   }
   let arr = [...groups.values()].sort((a, b) => (a.rep.dateFinished || '').localeCompare(b.rep.dateFinished || ''));
-  if (arr.length > 5) { const p = []; for (let i = 0; i < 5; i++) p.push(arr[Math.round(i * (arr.length - 1) / 4)]); arr = p; }
+  // Show them all up to a generous max; only spread if there are a lot, so
+  // nothing meaningful gets silently dropped.
+  const MAX = 8;
+  if (arr.length > MAX) { const p = []; for (let i = 0; i < MAX; i++) p.push(arr[Math.round(i * (arr.length - 1) / (MAX - 1))]); arr = p; }
   const highlights = arr.map(g => ({
     month: parseInt((g.rep.dateFinished || '').slice(5, 7), 10) || 0,
     title: g.size > 1 ? g.info.seriesName : g.info.soloTitle,
@@ -507,7 +508,7 @@ function buildShareYear() {
     lang: LANG_SHORT[g.rep.language] || (g.rep.language || 'EN').slice(0, 2).toUpperCase(),
   }));
 
-  return { year: y, count: inYear.length, avg, langList, pagesGood, totalPages, bestM, bestC, fmtLabel, highlights };
+  return { year: y, count: inYear.length, langList, pagesGood, totalPages, bestM, bestC, fmtLabel, highlights };
 }
 
 // Draw the card to a canvas and return it. Logical width 400; height fits content.
@@ -559,9 +560,9 @@ function drawShareCard(d) {
 
   // Stat row (3 cells)
   line(y);
-  const stats = [['Avg rating', d.avg ? d.avg + '★' : '—']];
+  const stats = [];
   if (d.pagesGood) stats.push(['Pages', d.totalPages.toLocaleString()]);
-  else if (d.bestM >= 0) stats.push(['Best month', `${MONTH_SHORT[d.bestM]} · ${d.bestC}`]);
+  if (d.bestM >= 0) stats.push(['Best month', `${MONTH_SHORT[d.bestM]} · ${d.bestC}`]);
   stats.push(['Languages', d.langList || '—']);
   let sx = P;
   const cellW = (W - 2 * P) / stats.length;
