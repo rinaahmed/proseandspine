@@ -914,13 +914,12 @@ function exportData() {
 // Share API (with files) isn't available.
 async function backupToCloud() {
   const file = new File([backupJSON()], `proseandspine-${today()}.json`, { type: 'application/json' });
+  // Share ONLY the file — adding title/text makes iOS present a text/message
+  // share (Messages, Mail) instead of a document share, which hides OneDrive,
+  // iCloud Drive and "Save to Files".
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({
-        files: [file],
-        title: 'Prose & Spine backup',
-        text: 'Save this file to OneDrive (or iCloud) to back up your library.',
-      });
+      await navigator.share({ files: [file] });
       return;
     } catch (e) {
       if (e.name === 'AbortError') return; // user dismissed the share sheet

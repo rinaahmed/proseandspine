@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.5] — 2026-07-11
+
+### Fixed
+- **"Back up to cloud" now shows OneDrive / Save to Files** (#16) — the share sheet was passing title/text, which made iOS present a text/message share (hiding storage apps). Now it shares only the file, so OneDrive, iCloud Drive, and "Save to Files" appear.
+
+---
+
 ## [v32.4] — 2026-07-11
 
 ### Added
