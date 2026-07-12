@@ -4,6 +4,14 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v34.1] — 2026-07-12
+
+### Fixed
+- **"Save covers offline" progress banner was hidden behind Settings** — the banner now shows because the Settings panel closes automatically when the backfill starts, instead of sitting on top of it.
+- **Backfill now skips unchanged covers** — re-running "Save covers offline" only fetches books that are missing a local cover or whose cover URL changed since it was last cached; covers that are still current are left untouched.
+
+---
+
 ## [v34.0] — 2026-07-12
 
 ### Added

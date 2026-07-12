@@ -27,11 +27,22 @@ function openDB() {
 }
 
 // ─── Local cover cache ────────────────────────────────────────────────────────
+// Each entry is { url, blob } — `url` is the remote thumbnail URL the blob was
+// cached from, so a later backfill can tell "still current" from "replaced"
+// and only re-fetch what actually changed.
 
-export function putCover(id, blob) {
+// Older entries (pre-URL-tracking) were stored as a raw Blob — wrap them so
+// callers always see the { url, blob } shape. `url: null` means "unknown
+// source, trust it as current" so existing caches aren't needlessly redone.
+function normalizeCoverEntry(entry) {
+  if (!entry) return null;
+  return entry instanceof Blob ? { url: null, blob: entry } : entry;
+}
+
+export function putCover(id, blob, url = null) {
   return openDB().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction(COVERS, 'readwrite');
-    tx.objectStore(COVERS).put(blob, id);
+    tx.objectStore(COVERS).put({ url, blob }, id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   }));
@@ -40,7 +51,7 @@ export function putCover(id, blob) {
 export function getCover(id) {
   return openDB().then(db => new Promise((resolve, reject) => {
     const req = db.transaction(COVERS, 'readonly').objectStore(COVERS).get(id);
-    req.onsuccess = () => resolve(req.result || null);
+    req.onsuccess = () => resolve(normalizeCoverEntry(req.result));
     req.onerror = () => reject(req.error);
   }));
 }
@@ -54,7 +65,7 @@ export function deleteCover(id) {
   }));
 }
 
-// Returns a Map of bookId → Blob for every cached cover.
+// Returns a Map of bookId → { url, blob } for every cached cover.
 export function getAllCovers() {
   return openDB().then(db => new Promise((resolve, reject) => {
     const map = new Map();
@@ -62,7 +73,7 @@ export function getAllCovers() {
     const req = store.openCursor();
     req.onsuccess = () => {
       const cur = req.result;
-      if (cur) { map.set(cur.key, cur.value); cur.continue(); }
+      if (cur) { map.set(cur.key, normalizeCoverEntry(cur.value)); cur.continue(); }
       else resolve(map);
     };
     req.onerror = () => reject(req.error);
