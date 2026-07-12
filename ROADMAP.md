@@ -26,6 +26,7 @@ when they're ready to be worked on._
 - **Filter shelves by tag / format / language** — shelves only have search + sort today; add filtering for a large multi-format/language library. #22
 - **Quick progress update for Currently Reading** — one-tap update of %/page on Reading cards. #23
 - **Tag management** — rename / merge tags across the library. #25
+- **"Recommend this book" share card** — per-book card (title/author/cover) with an editable message prefilled from notes, shared as an image; reuses the year-card share/preview. Caveat: embedding the remote cover needs a Worker proxy or local cover cache (#19). #27
 
 ### Durability / infrastructure
 - **Replace Claude API with a different AI API** — swap the cover-finder Worker's provider (currently `claude-sonnet-4-6` + web search/fetch). Needs a replacement with web-search/fetch (or a separate search API); keep the Worker's `{coverUrl}` contract so the app is unchanged. #26
