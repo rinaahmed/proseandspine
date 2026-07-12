@@ -213,6 +213,30 @@ export async function fetchCoverViaGoogle({ title, author, isbn }) {
   return null;
 }
 
+// Fetch a cover image's bytes through the Worker image-proxy (dodges CORS so
+// the blob is untainted and can be drawn to a canvas / cached locally).
+// Returns a Blob, or null on any failure.
+export async function fetchImageBlob(url) {
+  if (!url || !COVER_WORKER_URL) return null;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const res = await fetch(COVER_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: url }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return blob && blob.size && blob.type.startsWith('image/') ? blob : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 export async function detectBarcodeFromVideoFrame(videoEl) {
   if (!('BarcodeDetector' in window)) return null;
   try {
