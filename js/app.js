@@ -73,16 +73,24 @@ const MONTH_INITIALS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const LANG_SHORT = { en: 'EN', de: 'DE', ur: 'UR', fr: 'FR' };
 
-// Strip volume/part markers so all books in a series share one title.
-function stripSeries(title) {
-  const t = (title || '')
-    .replace(/[:,]?\s*(vol\.?|volume|tome|book|part|no\.?|#)\s*\.?\s*\d+.*$/i, '')
+// Work out a book's series so volumes collapse to one highlight.
+// Returns { key (for grouping), seriesName (shown when 2+ volumes collapse),
+// soloTitle (shown when it's the only volume) }.
+function seriesInfo(title) {
+  const t = (title || '').trim();
+  // "Title (Series Name, #3)" — series is named in the parenthetical
+  const paren = t.match(/^(.*?)\s*\(([^()]+?),\s*#?\s*[0-9ivxlcdm]+\s*\)\s*$/i);
+  if (paren) {
+    const solo = paren[1].trim() || t;
+    const name = paren[2].trim();
+    return { key: name.toLowerCase(), seriesName: name, soloTitle: solo };
+  }
+  // Volume markers in the title itself: "One Piece, Vol. 8", "Les Misérables Tome V"
+  const base = t
     .replace(/\s*\([^)]*\)\s*$/, '')
-    .trim();
-  return t || (title || '');
-}
-function seriesKey(b) {
-  return stripSeries(b.title).toLowerCase() + '|' + (b.author || '').toLowerCase();
+    .replace(/[:,]?\s*(vol\.?|volume|tome|book|part|no\.?|#)\s*\.?\s*[0-9ivxlcdm]+.*$/i, '')
+    .trim() || t;
+  return { key: base.toLowerCase(), seriesName: base, soloTitle: base };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -461,7 +469,8 @@ function buildShareYear() {
 
   const rated = inYear.filter(b => b.rating);
   const avg = rated.length ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1) : null;
-  const langCount = new Set(inYear.map(b => b.language || 'en')).size;
+  const langList = [...new Set(inYear.map(b => b.language || 'en'))]
+    .map(c => LANG_SHORT[c] || c.toUpperCase()).join(' · ');
 
   const withPages = inYear.filter(b => b.pageCount);
   const totalPages = withPages.reduce((s, b) => s + (b.pageCount || 0), 0);
@@ -481,23 +490,24 @@ function buildShareYear() {
   if (cand.length < 3) cand = inYear.filter(b => b.rating >= 4);
   const groups = new Map();
   for (const b of cand) {
-    const k = seriesKey(b);
-    const prev = groups.get(k);
-    if (!prev || b.rating > prev.rating || (b.rating === prev.rating && (b.dateFinished || '') > (prev.dateFinished || ''))) {
-      groups.set(k, b);
-    }
+    const info = seriesInfo(b.title);
+    const k = info.key + '|' + (b.author || '').toLowerCase();
+    const g = groups.get(k) || { rep: null, size: 0, info };
+    g.size++;
+    if (!g.rep || b.rating > g.rep.rating || (b.rating === g.rep.rating && (b.dateFinished || '') > (g.rep.dateFinished || ''))) g.rep = b;
+    groups.set(k, g);
   }
-  let hi = [...groups.values()].sort((a, b) => (a.dateFinished || '').localeCompare(b.dateFinished || ''));
-  if (hi.length > 5) { const p = []; for (let i = 0; i < 5; i++) p.push(hi[Math.round(i * (hi.length - 1) / 4)]); hi = p; }
-  const highlights = hi.map(b => ({
-    month: parseInt((b.dateFinished || '').slice(5, 7), 10) || 0,
-    title: stripSeries(b.title) || b.title,
-    author: b.author || '',
-    rating: b.rating || 0,
-    lang: LANG_SHORT[b.language] || (b.language || 'EN').slice(0, 2).toUpperCase(),
+  let arr = [...groups.values()].sort((a, b) => (a.rep.dateFinished || '').localeCompare(b.rep.dateFinished || ''));
+  if (arr.length > 5) { const p = []; for (let i = 0; i < 5; i++) p.push(arr[Math.round(i * (arr.length - 1) / 4)]); arr = p; }
+  const highlights = arr.map(g => ({
+    month: parseInt((g.rep.dateFinished || '').slice(5, 7), 10) || 0,
+    title: g.size > 1 ? g.info.seriesName : g.info.soloTitle,
+    author: g.rep.author || '',
+    rating: g.rep.rating || 0,
+    lang: LANG_SHORT[g.rep.language] || (g.rep.language || 'EN').slice(0, 2).toUpperCase(),
   }));
 
-  return { year: y, count: inYear.length, avg, langCount, pagesGood, totalPages, bestM, bestC, fmtLabel, highlights };
+  return { year: y, count: inYear.length, avg, langList, pagesGood, totalPages, bestM, bestC, fmtLabel, highlights };
 }
 
 // Draw the card to a canvas and return it. Logical width 400; height fits content.
@@ -552,7 +562,7 @@ function drawShareCard(d) {
   const stats = [['Avg rating', d.avg ? d.avg + '★' : '—']];
   if (d.pagesGood) stats.push(['Pages', d.totalPages.toLocaleString()]);
   else if (d.bestM >= 0) stats.push(['Best month', `${MONTH_SHORT[d.bestM]} · ${d.bestC}`]);
-  stats.push(['Languages', String(d.langCount)]);
+  stats.push(['Languages', d.langList || '—']);
   let sx = P;
   const cellW = (W - 2 * P) / stats.length;
   for (const [k, v] of stats) {
@@ -566,9 +576,10 @@ function drawShareCard(d) {
   y += 56;
 
   // Section label
+  const secLabel = 'FIVE-STAR HIGHLIGHTS';
   ctx.fillStyle = C.faint; ctx.font = `700 11px ${SANS}`; ctx.textAlign = 'left';
-  ctx.fillText('FIVE-STAR READS', P, y + 20);
-  const lblW = ctx.measureText('FIVE-STAR READS').width;
+  ctx.fillText(secLabel, P, y + 20);
+  const lblW = ctx.measureText(secLabel).width;
   ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(P + lblW + 8, y + 16); ctx.lineTo(W - P, y + 16); ctx.stroke();
   y += 34;
 
@@ -608,8 +619,6 @@ function drawShareCard(d) {
   line(y); y += 18;
   ctx.fillStyle = C.sub; ctx.font = `italic 400 12px ${SERIF}`; ctx.textAlign = 'left';
   ctx.fillText(d.fmtLabel || '', P, y + 8);
-  ctx.fillStyle = C.faint; ctx.font = `400 11px ${SANS}`; ctx.textAlign = 'right';
-  ctx.fillText('proseandspine', W - P, y + 8);
 
   return cv;
 }

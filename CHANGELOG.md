@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.1] — 2026-07-11
+
+### Changed
+- **Year-in-books card refinements** — languages are now **listed** (e.g. "EN · DE") instead of just counted; the highlights section is labelled **"Five-star highlights"** to signal it's a selection; the redundant footer wordmark is removed. **Series now collapse correctly** even when the series is named in the title's parenthetical (e.g. two "Remembrance of Earth's Past" volumes show as one entry).
+
+---
+
 ## [v33.0] — 2026-07-11
 
 ### Added
