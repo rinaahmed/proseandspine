@@ -46,9 +46,9 @@ body {
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 9999;
-  /* Neon ground with black text — impossible to miss, clearly not production */
-  background: #ccff00;
-  color: #000;
+  /* Neon magenta with white text — impossible to miss, clearly not production */
+  background: #ff2d95;
+  color: #fff;
   font-family: var(--font-sans);
   font-size: 0.74rem;
   font-weight: 800;
@@ -60,8 +60,8 @@ body {
   animation: staging-pulse 1.3s ease-in-out infinite;
 }
 @keyframes staging-pulse {
-  0%, 100% { background: #ccff00; box-shadow: 0 0 0 rgba(204,255,0,0); }
-  50%      { background: #eaff4d; box-shadow: 0 2px 16px rgba(204,255,0,0.9); }
+  0%, 100% { background: #ff2d95; box-shadow: 0 0 0 rgba(255,45,149,0); }
+  50%      { background: #ff5cae; box-shadow: 0 2px 16px rgba(255,45,149,0.9); }
 }
 @media (prefers-reduced-motion: reduce) {
   .staging-banner { animation: none; }

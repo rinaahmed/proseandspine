@@ -4,10 +4,10 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
-## [v32.8] — 2026-07-11
+## [v32.9] — 2026-07-11
 
 ### Changed
-- **Staging banner is now neon** — bright lime, bold uppercase, black text, with a gentle pulse — so staging is obvious at a glance next to production (which has similar data). Staging-only; respects reduced-motion.
+- **Staging banner is now neon magenta** — bright magenta, bold uppercase white text, gentle pulse — so staging is obvious at a glance next to production (which has similar data). Staging-only; respects reduced-motion.
 
 ---
 
