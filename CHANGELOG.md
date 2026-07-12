@@ -4,6 +4,16 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.4] — 2026-07-11
+
+### Added
+- **Highlights section on Stats + pick your own card highlights** — the Stats page now lists all your **4- and 5-star reads** for the year (series collapsed), each with a ☆ **pin**. Pin up to 5 to feature them on your share card. If you pin none, the card auto-picks as before. The pinned state (`featured`) is stored on the book, so it travels with your backups.
+
+### Changed
+- Share card highlights are capped at **5** again and use your pinned picks when you have them; card section label is now just "Highlights".
+
+---
+
 ## [v33.3] — 2026-07-11
 
 ### Changed

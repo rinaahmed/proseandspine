@@ -423,6 +423,27 @@ function renderStats() {
         </div>`).join('')}
     </div>` : '';
 
+  // ── Highlights (4★+ reads; pin up to 5 to feature on the share card) ──
+  const hlRows = collapsedHighlights(scope);
+  const featuredCount = hlRows.filter(r => r.featured).length;
+  const highlightsSec = hlRows.length ? `
+    <div class="st-sec-title">Highlights · pin up to ${HIGHLIGHT_CAP} for your card</div>
+    <div class="st-hl-list">
+      ${hlRows.map(r => `
+        <div class="st-hl-row">
+          <span class="st-hl-mo">${(MONTH_SHORT[r.month - 1] || '').toUpperCase()}</span>
+          <span class="st-hl-lang">${r.lang}</span>
+          <span class="st-hl-main">
+            <span class="st-hl-title ${textClass(r.title)}" dir="auto">${escape(r.title)}</span>
+            <span class="st-hl-author ${textClass(r.author)}" dir="auto">${escape(r.author)}</span>
+          </span>
+          <span class="st-hl-stars">${'★'.repeat(Math.round(r.rating))}</span>
+          <button class="st-hl-pin ${r.featured ? 'on' : ''}" data-pin="${r.id}" aria-label="${r.featured ? 'Unpin from card' : 'Pin to card'}" title="${r.featured ? 'Featured on card' : 'Feature on card'}">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="${r.featured ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 1.7l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.9 4.3 13.9l.8-4.2L2 6.1l4.2-.5z"/></svg>
+          </button>
+        </div>`).join('')}
+    </div>` : '';
+
   // ── Top tags ──
   const tagEntries = Object.entries(byTag).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const maxTag = Math.max(1, ...tagEntries.map(([, c]) => c));
@@ -443,6 +464,7 @@ function renderStats() {
       ${years.length > 1 ? yearChips : ''}
       ${years.length > 1 ? yearsBars : ''}
       ${monthly}
+      ${highlightsSec}
       ${formats}
       ${languages}
       ${tags}
@@ -457,9 +479,54 @@ function renderStats() {
     });
   });
   view.querySelector('#btn-share-year')?.addEventListener('click', shareYearCard);
+
+  // Pin / unpin a highlight (feature on the share card), capped at HIGHLIGHT_CAP
+  view.querySelectorAll('[data-pin]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.dataset.pin, 10);
+      const book = state.books.find(b => b.id === id);
+      if (!book) return;
+      if (!book.featured && featuredCount >= HIGHLIGHT_CAP) {
+        alert(`You can feature up to ${HIGHLIGHT_CAP} highlights on your card. Unpin one first.`);
+        return;
+      }
+      await updateBook({ ...book, featured: !book.featured });
+      state.books = await getAllBooks();
+      renderStats();
+    });
+  });
 }
 
 // ─── "Year in books" share card ───────────────────────────────────────────────
+
+// Collapse a set of books into highlight rows: 4★+ only, one row per series,
+// chronological. Each row carries the representative book's id so it can be
+// pinned/featured. Used by both the Stats "Highlights" list and the card.
+function collapsedHighlights(books) {
+  const cand = books.filter(b => (b.rating || 0) >= 4);
+  const groups = new Map();
+  for (const b of cand) {
+    const info = seriesInfo(b.title);
+    const k = info.key + '|' + (b.author || '').toLowerCase();
+    const g = groups.get(k) || { rep: null, size: 0, info };
+    g.size++;
+    if (!g.rep || b.rating > g.rep.rating || (b.rating === g.rep.rating && (b.dateFinished || '') > (g.rep.dateFinished || ''))) g.rep = b;
+    groups.set(k, g);
+  }
+  const rows = [...groups.values()].map(g => ({
+    id: g.rep.id,
+    title: g.size > 1 ? g.info.seriesName : g.info.soloTitle,
+    author: g.rep.author || '',
+    month: parseInt((g.rep.dateFinished || '').slice(5, 7), 10) || 0,
+    rating: g.rep.rating || 0,
+    lang: LANG_SHORT[g.rep.language] || (g.rep.language || 'EN').slice(0, 2).toUpperCase(),
+    featured: !!g.rep.featured,
+  }));
+  rows.sort((a, b) => a.month - b.month);
+  return rows;
+}
+
+const HIGHLIGHT_CAP = 5;
 
 function buildShareYear() {
   const readBooks = state.books.filter(b => b.shelf === 'read');
@@ -483,30 +550,23 @@ function buildShareYear() {
   for (const b of inYear) for (const f of bookFormats(b)) fmtSet.add(f);
   const fmtLabel = ['kindle', 'paper', 'audio'].filter(f => fmtSet.has(f)).map(f => FORMAT_LABEL[f]).join(' · ');
 
-  // Highlights: 5★ reads, filled with 4★+ if fewer than 3; series collapsed to one.
-  let cand = inYear.filter(b => b.rating >= 5);
-  if (cand.length < 3) cand = inYear.filter(b => b.rating >= 4);
-  const groups = new Map();
-  for (const b of cand) {
-    const info = seriesInfo(b.title);
-    const k = info.key + '|' + (b.author || '').toLowerCase();
-    const g = groups.get(k) || { rep: null, size: 0, info };
-    g.size++;
-    if (!g.rep || b.rating > g.rep.rating || (b.rating === g.rep.rating && (b.dateFinished || '') > (g.rep.dateFinished || ''))) g.rep = b;
-    groups.set(k, g);
+  // Highlights: the user's pinned picks, or an auto selection if none pinned.
+  const rows = collapsedHighlights(inYear);
+  let picks = rows.filter(r => r.featured);
+  if (!picks.length) {
+    // Auto: prefer 5★, fall back to all 4★+; spread across the year if many.
+    const five = rows.filter(r => r.rating >= 5);
+    let base = (five.length >= 3 ? five : rows).slice();
+    if (base.length > HIGHLIGHT_CAP) {
+      const p = [];
+      for (let i = 0; i < HIGHLIGHT_CAP; i++) p.push(base[Math.round(i * (base.length - 1) / (HIGHLIGHT_CAP - 1))]);
+      base = p;
+    }
+    picks = base;
+  } else {
+    picks = picks.slice(0, HIGHLIGHT_CAP);
   }
-  let arr = [...groups.values()].sort((a, b) => (a.rep.dateFinished || '').localeCompare(b.rep.dateFinished || ''));
-  // Show them all up to a generous max; only spread if there are a lot, so
-  // nothing meaningful gets silently dropped.
-  const MAX = 8;
-  if (arr.length > MAX) { const p = []; for (let i = 0; i < MAX; i++) p.push(arr[Math.round(i * (arr.length - 1) / (MAX - 1))]); arr = p; }
-  const highlights = arr.map(g => ({
-    month: parseInt((g.rep.dateFinished || '').slice(5, 7), 10) || 0,
-    title: g.size > 1 ? g.info.seriesName : g.info.soloTitle,
-    author: g.rep.author || '',
-    rating: g.rep.rating || 0,
-    lang: LANG_SHORT[g.rep.language] || (g.rep.language || 'EN').slice(0, 2).toUpperCase(),
-  }));
+  const highlights = picks.map(r => ({ month: r.month, title: r.title, author: r.author, rating: r.rating, lang: r.lang }));
 
   return { year: y, count: inYear.length, langList, pagesGood, totalPages, bestM, bestC, fmtLabel, highlights };
 }
@@ -577,7 +637,7 @@ function drawShareCard(d) {
   y += 56;
 
   // Section label
-  const secLabel = 'FIVE-STAR HIGHLIGHTS';
+  const secLabel = 'HIGHLIGHTS';
   ctx.fillStyle = C.faint; ctx.font = `700 11px ${SANS}`; ctx.textAlign = 'left';
   ctx.fillText(secLabel, P, y + 20);
   const lblW = ctx.measureText(secLabel).width;
