@@ -20,6 +20,15 @@ _Nothing queued — pull from the backlog below._
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
+### Feature ideas
+- **Reading goals** — set a yearly target (e.g. 50 books) with a progress ring on the Stats page. Builds on the stats redesign. #20
+- **Series tracking** — group volumes into a series (Three-Body, One Piece, …); see read/unread and "next up". #21
+- **Filter shelves by tag / format / language** — shelves only have search + sort today; add filtering for a large multi-format/language library. #22
+- **Quick progress update for Currently Reading** — one-tap update of %/page on Reading cards. #23
+- **Shareable "Year in books" image** — export a summary card (PNG) from Stats. #24
+- **Tag management** — rename / merge tags across the library. #25
+
+### Durability / infrastructure
 - **Cache cover thumbnails locally** — covers are remote URLs today (slow loads, break when URLs rot). Store downscaled thumbnails in IndexedDB for instant/offline covers. Needs a Worker image-proxy (CORS) + a backup with/without-images toggle. #19
 - **Automatic cloud backup to OneDrive** — hands-off backup via Microsoft Graph (auto-write to the user's OneDrive, one-tap restore on a new device). Follow-on to the one-tap share backup. Needs Azure app + OAuth. #18
 
