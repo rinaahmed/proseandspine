@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.0] — 2026-07-11
+
+### Added
+- **Shareable "Year in books" card** (#24) — a "Share my year 📸" button on the Stats page generates a warm editorial image (PNG) with your books-read count, avg rating, pages/best month, languages, and a **five-star reads** highlight list. Highlights are spread across the year, show a per-book **language badge**, and **collapse series to a single entry** (a trilogy shows once). Falls back to 4★ reads if you have fewer than three 5★. Shares via the OS share sheet (Save to Files / OneDrive / socials) with a download fallback. Reflects the year selected on the Stats page.
+
+---
+
 ## [v32.11] — 2026-07-11
 
 ### Changed

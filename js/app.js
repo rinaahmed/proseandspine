@@ -70,6 +70,20 @@ function currentSort() {
 const SERIES = ['#2A4B8D', '#3F6CB0', '#1C7C6B', '#6B4C9A', '#C24D6C', '#2E7D8A'];
 const FORMAT_COLOR = { kindle: '#2A4B8D', audio: '#1C7C6B', paper: '#6B4C9A' };
 const MONTH_INITIALS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const LANG_SHORT = { en: 'EN', de: 'DE', ur: 'UR', fr: 'FR' };
+
+// Strip volume/part markers so all books in a series share one title.
+function stripSeries(title) {
+  const t = (title || '')
+    .replace(/[:,]?\s*(vol\.?|volume|tome|book|part|no\.?|#)\s*\.?\s*\d+.*$/i, '')
+    .replace(/\s*\([^)]*\)\s*$/, '')
+    .trim();
+  return t || (title || '');
+}
+function seriesKey(b) {
+  return stripSeries(b.title).toLowerCase() + '|' + (b.author || '').toLowerCase();
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -424,6 +438,7 @@ function renderStats() {
       ${formats}
       ${languages}
       ${tags}
+      <button id="btn-share-year" class="st-share-btn" type="button">Share my year 📸</button>
     </div>`;
 
   // Drill-in: tapping a year chip or bar scopes the report
@@ -433,6 +448,190 @@ function renderStats() {
       renderStats();
     });
   });
+  view.querySelector('#btn-share-year')?.addEventListener('click', shareYearCard);
+}
+
+// ─── "Year in books" share card ───────────────────────────────────────────────
+
+function buildShareYear() {
+  const readBooks = state.books.filter(b => b.shelf === 'read');
+  const cur = String(new Date().getFullYear());
+  const y = (state.statsYear && state.statsYear !== 'all') ? state.statsYear : cur;
+  const inYear = readBooks.filter(b => yearOf(b) === y);
+
+  const rated = inYear.filter(b => b.rating);
+  const avg = rated.length ? (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1) : null;
+  const langCount = new Set(inYear.map(b => b.language || 'en')).size;
+
+  const withPages = inYear.filter(b => b.pageCount);
+  const totalPages = withPages.reduce((s, b) => s + (b.pageCount || 0), 0);
+  const pagesGood = inYear.length > 0 && withPages.length / inYear.length >= 0.5 && totalPages > 0;
+
+  const monthCounts = new Array(12).fill(0);
+  for (const b of inYear) { const m = parseInt((b.dateFinished || '').slice(5, 7), 10); if (m >= 1 && m <= 12) monthCounts[m - 1]++; }
+  let bestM = -1, bestC = 0;
+  monthCounts.forEach((c, i) => { if (c > bestC) { bestC = c; bestM = i; } });
+
+  const fmtSet = new Set();
+  for (const b of inYear) for (const f of bookFormats(b)) fmtSet.add(f);
+  const fmtLabel = ['kindle', 'paper', 'audio'].filter(f => fmtSet.has(f)).map(f => FORMAT_LABEL[f]).join(' · ');
+
+  // Highlights: 5★ reads, filled with 4★+ if fewer than 3; series collapsed to one.
+  let cand = inYear.filter(b => b.rating >= 5);
+  if (cand.length < 3) cand = inYear.filter(b => b.rating >= 4);
+  const groups = new Map();
+  for (const b of cand) {
+    const k = seriesKey(b);
+    const prev = groups.get(k);
+    if (!prev || b.rating > prev.rating || (b.rating === prev.rating && (b.dateFinished || '') > (prev.dateFinished || ''))) {
+      groups.set(k, b);
+    }
+  }
+  let hi = [...groups.values()].sort((a, b) => (a.dateFinished || '').localeCompare(b.dateFinished || ''));
+  if (hi.length > 5) { const p = []; for (let i = 0; i < 5; i++) p.push(hi[Math.round(i * (hi.length - 1) / 4)]); hi = p; }
+  const highlights = hi.map(b => ({
+    month: parseInt((b.dateFinished || '').slice(5, 7), 10) || 0,
+    title: stripSeries(b.title) || b.title,
+    author: b.author || '',
+    rating: b.rating || 0,
+    lang: LANG_SHORT[b.language] || (b.language || 'EN').slice(0, 2).toUpperCase(),
+  }));
+
+  return { year: y, count: inYear.length, avg, langCount, pagesGood, totalPages, bestM, bestC, fmtLabel, highlights };
+}
+
+// Draw the card to a canvas and return it. Logical width 400; height fits content.
+function drawShareCard(d) {
+  const S = 3;                 // supersample for a crisp export
+  const W = 400, P = 32;
+  const bodyX = P + 45, bodyW = W - P - bodyX;
+  const C = { cream: '#F7F5EF', ink: '#2A4B8D', text: '#20232C', sub: '#6A6F7A', faint: '#9096A2', line: '#EFEBE0', gold: '#C99700' };
+  const SERIF = "'Spectral', Georgia, serif";
+  const SANS = "'Public Sans', system-ui, sans-serif";
+
+  // Height model — must match the draw increments below.
+  let H = 30 + 24 + 14 + 60 + 22 + 56 + 34 + d.highlights.length * 62 + 16 + 28 + 22;
+
+  const cv = document.createElement('canvas');
+  cv.width = W * S; cv.height = Math.round(H * S);
+  const ctx = cv.getContext('2d');
+  ctx.scale(S, S);
+  ctx.textBaseline = 'alphabetic';
+
+  const bg = ctx.createLinearGradient(0, 0, W, 0);
+  bg.addColorStop(0, C.cream); bg.addColorStop(1, C.cream);
+  ctx.fillStyle = C.cream; ctx.fillRect(0, 0, W, H);
+  const tint = ctx.createRadialGradient(W, 0, 0, W, 0, W * 0.9);
+  tint.addColorStop(0, 'rgba(63,108,176,0.10)'); tint.addColorStop(1, 'rgba(63,108,176,0)');
+  ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H);
+
+  const line = (y) => { ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P, y); ctx.lineTo(W - P, y); ctx.stroke(); };
+  const ell = (s, max) => { if (ctx.measureText(s).width <= max) return s; let t = s; while (t.length && ctx.measureText(t + '…').width > max) t = t.slice(0, -1); return t.replace(/\s+$/, '') + '…'; };
+
+  let y = 30;
+
+  // Header
+  ctx.fillStyle = C.ink; ctx.font = `600 17px ${SERIF}`; ctx.textAlign = 'left';
+  ctx.fillText('Prose & Spine', P, y + 4);
+  ctx.fillStyle = C.faint; ctx.font = `600 13px ${SANS}`; ctx.textAlign = 'right';
+  ctx.fillText(d.year, W - P, y + 3);
+  y += 24 + 14;
+
+  // Hero number + label
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.ink; ctx.font = `600 59px ${SERIF}`;
+  ctx.fillText(String(d.count), P, y + 44);
+  const nW = ctx.measureText(String(d.count)).width;
+  ctx.fillStyle = C.sub; ctx.font = `400 15px ${SANS}`;
+  ctx.fillText('books read', P + nW + 12, y + 28);
+  ctx.fillText('this year', P + nW + 12, y + 45);
+  y += 60 + 22;
+
+  // Stat row (3 cells)
+  line(y);
+  const stats = [['Avg rating', d.avg ? d.avg + '★' : '—']];
+  if (d.pagesGood) stats.push(['Pages', d.totalPages.toLocaleString()]);
+  else if (d.bestM >= 0) stats.push(['Best month', `${MONTH_SHORT[d.bestM]} · ${d.bestC}`]);
+  stats.push(['Languages', String(d.langCount)]);
+  let sx = P;
+  const cellW = (W - 2 * P) / stats.length;
+  for (const [k, v] of stats) {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = C.faint; ctx.font = `700 10px ${SANS}`;
+    ctx.fillText(k.toUpperCase(), sx, y + 18);
+    ctx.fillStyle = C.text; ctx.font = `600 19px ${SERIF}`;
+    ctx.fillText(v, sx, y + 40);
+    sx += cellW;
+  }
+  y += 56;
+
+  // Section label
+  ctx.fillStyle = C.faint; ctx.font = `700 11px ${SANS}`; ctx.textAlign = 'left';
+  ctx.fillText('FIVE-STAR READS', P, y + 20);
+  const lblW = ctx.measureText('FIVE-STAR READS').width;
+  ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(P + lblW + 8, y + 16); ctx.lineTo(W - P, y + 16); ctx.stroke();
+  y += 34;
+
+  // Highlights
+  for (const h of d.highlights) {
+    // month
+    ctx.fillStyle = C.ink; ctx.font = `700 11px ${SANS}`; ctx.textAlign = 'left';
+    ctx.fillText((MONTH_SHORT[h.month - 1] || '').toUpperCase(), P, y + 13);
+    // language badge
+    const badge = h.lang;
+    ctx.font = `800 10px ${SANS}`;
+    const bw = ctx.measureText(badge).width + 10;
+    ctx.fillStyle = C.ink;
+    const bx = bodyX, by = y + 2, bh = 15, br = 4;
+    ctx.beginPath();
+    ctx.moveTo(bx + br, by); ctx.arcTo(bx + bw, by, bx + bw, by + bh, br);
+    ctx.arcTo(bx + bw, by + bh, bx, by + bh, br); ctx.arcTo(bx, by + bh, bx, by, br);
+    ctx.arcTo(bx, by, bx + bw, by, br); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.fillText(badge, bx + bw / 2, by + 11);
+    // title (single line, ellipsised) after the badge
+    ctx.textAlign = 'left';
+    ctx.fillStyle = C.text; ctx.font = `600 15px ${SERIF}`;
+    const tx = bx + bw + 7;
+    ctx.fillText(ell(h.title, W - P - tx), tx, y + 14);
+    // author
+    ctx.fillStyle = C.sub; ctx.font = `400 12px ${SANS}`;
+    ctx.fillText(ell(h.author, bodyW), bodyX, y + 31);
+    // stars
+    ctx.fillStyle = C.gold; ctx.font = `400 12px ${SANS}`;
+    ctx.fillText('★'.repeat(Math.round(h.rating)), bodyX, y + 47);
+    y += 62;
+  }
+
+  // Footer
+  y = H - 22 - 18;
+  line(y); y += 18;
+  ctx.fillStyle = C.sub; ctx.font = `italic 400 12px ${SERIF}`; ctx.textAlign = 'left';
+  ctx.fillText(d.fmtLabel || '', P, y + 8);
+  ctx.fillStyle = C.faint; ctx.font = `400 11px ${SANS}`; ctx.textAlign = 'right';
+  ctx.fillText('proseandspine', W - P, y + 8);
+
+  return cv;
+}
+
+async function shareYearCard() {
+  const d = buildShareYear();
+  if (!d.count) { alert('No finished books in this year yet — nothing to share.'); return; }
+  try { await document.fonts.ready; } catch {}
+  const canvas = drawShareCard(d);
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  if (!blob) { alert('Could not create the image.'); return; }
+  const file = new File([blob], `prose-and-spine-${d.year}.png`, { type: 'image/png' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  // Fallback: download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = file.name; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Star Input Widget ────────────────────────────────────────────────────────

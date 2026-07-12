@@ -994,6 +994,24 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
 .st-hf { height: 100%; border-radius: 999px; min-width: 4px; }
 .st-hc { font-size: 0.74rem; color: var(--text3); text-align: right; }
 
+.st-share-btn {
+  margin-top: 26px;
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: background 0.15s;
+}
+.st-share-btn:hover { background: var(--accent-hover); }
+.st-share-btn:active { transform: scale(0.99); }
+
 /* Top-tag bars */
 .st-tagbars { display: flex; flex-direction: column; gap: 10px; }
 .st-tagbar { display: grid; grid-template-columns: 84px 1fr 24px; align-items: center; gap: 10px; }
