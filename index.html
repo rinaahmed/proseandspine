@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner -->
   <div id="staging-banner" class="staging-banner" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v32.5
+    ⚠ STAGING &nbsp;·&nbsp; v32.6
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.5</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.6</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
         <!-- equalizer / filter icon -->
         <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -382,6 +382,18 @@
             </div>
             <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
           </button>
+          <button class="settings-row settings-row--danger" id="btn-reset-library">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 5h12"/><path d="M6.5 5V3.5h5V5"/><path d="M4.5 5l.7 9a1 1 0 0 0 1 .9h5.6a1 1 0 0 0 1-.9l.7-9"/><path d="M7.5 8v4M10.5 8v4"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Delete all books</span>
+              <span class="settings-row-sub">Wipe the library and start fresh</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
         </div>
       </div>
 
@@ -435,7 +447,7 @@
       <div>
         <div class="settings-group-label">About</div>
         <div class="settings-group">
-          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.5</p>
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.6</p>
         </div>
       </div>
 
@@ -482,6 +494,24 @@
 </div>
 
 
+<!-- ── Reset-library Modal ────────────────────────────────────────────── -->
+<div id="reset-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content modal-content--sm">
+    <div class="modal-header">
+      <h2 id="reset-modal-title">Delete all books?</h2>
+    </div>
+    <div class="import-body">
+      <p>This permanently deletes <strong><span id="reset-count">all</span> books</strong> from this device and cannot be undone. Consider backing up first (Settings → Back up to cloud).</p>
+      <div class="import-actions">
+        <button id="btn-reset-confirm" class="btn btn-danger">Delete everything</button>
+        <button id="btn-reset-cancel"  class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ── Import-confirm Modal ───────────────────────────────────────────── -->
 <div id="import-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
   <div class="modal-overlay" tabindex="-1"></div>
@@ -503,7 +533,7 @@
 
 <script>
 (async () => {
-  const V = '32.5';
+  const V = '32.6';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);

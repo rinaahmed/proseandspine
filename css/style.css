@@ -835,6 +835,8 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
 }
 .settings-row-text { flex: 1; min-width: 0; }
 .settings-row-title { font-size: 0.9rem; font-weight: 600; color: var(--text); display: block; }
+.settings-row--danger .settings-row-icon { color: var(--danger); }
+.settings-row--danger .settings-row-title { color: var(--danger); }
 .settings-row-sub { font-size: 0.78rem; color: var(--text2); display: block; margin-top: 1px; }
 .settings-chevron { color: var(--text3); flex-shrink: 0; }
 .settings-hint { font-size: 0.82rem; color: var(--text3); line-height: 1.55; padding: 12px 14px; border-bottom: 1px solid var(--bg2); }

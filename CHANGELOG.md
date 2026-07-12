@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.6] — 2026-07-11
+
+### Added
+- **"Delete all books" in Settings → Storage** — wipe the library and start fresh, behind a confirmation modal that shows the count and suggests backing up first. Useful for clearing duplicates (e.g. after an Import → Merge) then re-importing with Replace all.
+
+---
+
 ## [v32.5] — 2026-07-11
 
 ### Fixed

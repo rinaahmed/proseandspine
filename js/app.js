@@ -1,4 +1,4 @@
-import { getAllBooks, addBook, updateBook, deleteBook, importBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
+import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
 import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
@@ -1142,6 +1142,24 @@ function bindEvents() {
   // Export / Import
   document.getElementById('btn-backup-cloud')?.addEventListener('click', backupToCloud);
   document.getElementById('btn-export').addEventListener('click', exportData);
+
+  // Delete all books (start fresh) — behind a confirmation modal
+  document.getElementById('btn-reset-library')?.addEventListener('click', () => {
+    document.getElementById('reset-count').textContent = state.books.length;
+    document.getElementById('reset-modal').classList.remove('hidden');
+  });
+  document.getElementById('btn-reset-cancel')?.addEventListener('click', () => {
+    document.getElementById('reset-modal').classList.add('hidden');
+  });
+  document.getElementById('reset-modal')?.querySelector('.modal-overlay').addEventListener('click', () => {
+    document.getElementById('reset-modal').classList.add('hidden');
+  });
+  document.getElementById('btn-reset-confirm')?.addEventListener('click', async () => {
+    await clearAllBooks();
+    document.getElementById('reset-modal').classList.add('hidden');
+    closeSettings();
+    await refreshBooks();
+  });
   document.getElementById('btn-import').addEventListener('click', () => document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change', handleImportFile);
 
