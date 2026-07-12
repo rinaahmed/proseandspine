@@ -20,6 +20,7 @@ _Nothing queued — pull from the backlog below._
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
+- **Cache cover thumbnails locally** — covers are remote URLs today (slow loads, break when URLs rot). Store downscaled thumbnails in IndexedDB for instant/offline covers. Needs a Worker image-proxy (CORS) + a backup with/without-images toggle. #19
 - **Automatic cloud backup to OneDrive** — hands-off backup via Microsoft Graph (auto-write to the user's OneDrive, one-tap restore on a new device). Follow-on to the one-tap share backup. Needs Azure app + OAuth. #18
 - **Audible library import** _(undecided — may or may not build)_ — import audiobook titles from Audible via a selective checklist (untick a child's/private titles); no official API, needs a workaround source. Depends on multi-format (now shipped). #8
 
