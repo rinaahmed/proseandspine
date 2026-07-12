@@ -4,6 +4,45 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.4] — 2026-07-11
+
+### Added
+- **Highlights section on Stats + pick your own card highlights** — the Stats page now lists all your **4- and 5-star reads** for the year (series collapsed), each with a ☆ **pin**. Pin up to 5 to feature them on your share card. If you pin none, the card auto-picks as before. The pinned state (`featured`) is stored on the book, so it travels with your backups.
+
+### Changed
+- Share card highlights are capped at **5** again and use your pinned picks when you have them; card section label is now just "Highlights".
+
+---
+
+## [v33.3] — 2026-07-11
+
+### Changed
+- **Year card: highlights no longer silently dropped** — the previous 5-item cap combined with "spread across the year" could omit meaningful reads (e.g. a collapsed series). Now shows up to 8 highlights, so on a normal reading year nothing is cut; the selection is fully deterministic.
+- **Removed the Avg rating stat** (little value); the stat row now shows Pages and/or Best month, plus Languages.
+
+---
+
+## [v33.2] — 2026-07-11
+
+### Changed
+- **Preview the year-in-books card before sharing** — "Share my year" now shows the rendered card in a preview modal with **Share** and **Save image** buttons, so you see exactly what you're sending before it goes out.
+
+---
+
+## [v33.1] — 2026-07-11
+
+### Changed
+- **Year-in-books card refinements** — languages are now **listed** (e.g. "EN · DE") instead of just counted; the highlights section is labelled **"Five-star highlights"** to signal it's a selection; the redundant footer wordmark is removed. **Series now collapse correctly** even when the series is named in the title's parenthetical (e.g. two "Remembrance of Earth's Past" volumes show as one entry).
+
+---
+
+## [v33.0] — 2026-07-11
+
+### Added
+- **Shareable "Year in books" card** (#24) — a "Share my year 📸" button on the Stats page generates a warm editorial image (PNG) with your books-read count, avg rating, pages/best month, languages, and a **five-star reads** highlight list. Highlights are spread across the year, show a per-book **language badge**, and **collapse series to a single entry** (a trilogy shows once). Falls back to 4★ reads if you have fewer than three 5★. Shares via the OS share sheet (Save to Files / OneDrive / socials) with a download fallback. Reflects the year selected on the Stats page.
+
+---
+
 ## [v32.11] — 2026-07-11
 
 ### Changed
