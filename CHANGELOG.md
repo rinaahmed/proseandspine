@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.5] — 2026-07-11
+
+### Added
+- **"Fetch missing covers (Google)"** — a free cover fetch using Google Books / Open Library that needs **no AI credits**, for when the Claude cover finder is unavailable (e.g. out of credits). The existing Claude option is relabelled "Fetch missing covers (Claude)". Google-sourced covers are marked so a later Claude refresh can still upgrade them.
+
+---
+
 ## [v33.4] — 2026-07-11
 
 ### Added

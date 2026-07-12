@@ -1,5 +1,5 @@
 import { getAllBooks, addBook, updateBook, deleteBook, importBooks, clearAllBooks, migrateCoverSource, migrateFormats, bookFormats, ensurePersistentStorage } from './db.js';
-import { searchBooks, lookupISBN, fetchCoverForBook, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
+import { searchBooks, lookupISBN, fetchCoverForBook, fetchCoverViaGoogle, getLastCoverError, detectBarcodeFromVideoFrame, isBarcodeSupported } from './books-api.js';
 import { parseGoodreadsCSV } from './goodreads.js';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -1262,7 +1262,8 @@ let _coverFetchAbort = false;
 const COVER_DONE = new Set(['claude', 'manual', 'existing']);
 
 // mode: 'missing' (no cover) | 'refresh' (not yet Claude-done) | 'force' (every book)
-async function fetchMissingCovers(books, mode = 'missing') {
+// source: 'claude' (web search, uses AI credits) | 'google' (Google Books, free)
+async function fetchMissingCovers(books, mode = 'missing', source = 'claude') {
   let targets;
   if (mode === 'force') targets = books.slice();
   else if (mode === 'refresh') targets = books.filter(b => !COVER_DONE.has(b.coverSource));
@@ -1298,15 +1299,14 @@ async function fetchMissingCovers(books, mode = 'missing') {
     const book = targets[i];
     bannerText.textContent = `${verb} covers… ${i + 1} / ${targets.length}`;
 
-    const coverUrl = await fetchCoverForBook({
-      title: book.title,
-      author: book.author,
-      isbn: book.isbn,
-    });
+    const coverUrl = source === 'google'
+      ? await fetchCoverViaGoogle({ title: book.title, author: book.author, isbn: book.isbn })
+      : await fetchCoverForBook({ title: book.title, author: book.author, isbn: book.isbn });
 
     if (coverUrl) {
-      // Store the cover and mark it Claude-done so future refreshes skip it
-      await updateBook({ ...book, thumbnail: coverUrl, coverSource: 'claude' });
+      // Google covers are marked 'google' (a later Claude refresh can still upgrade
+      // them); Claude covers are marked 'claude' so refreshes skip them.
+      await updateBook({ ...book, thumbnail: coverUrl, coverSource: source === 'google' ? 'google' : 'claude' });
       found++;
       state.books = await getAllBooks();
     } else {
@@ -1314,7 +1314,7 @@ async function fetchMissingCovers(books, mode = 'missing') {
     }
 
     // Small delay between requests
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, source === 'google' ? 250 : 500));
   }
 
   await refreshBooks();
@@ -1502,7 +1502,13 @@ function bindEvents() {
   // Fetch missing covers (only books with no cover)
   document.getElementById('btn-fetch-covers')?.addEventListener('click', () => {
     closeSettings();
-    fetchMissingCovers(state.books, 'missing');
+    fetchMissingCovers(state.books, 'missing', 'claude');
+  });
+
+  // Fetch missing covers via Google Books (free, no AI credits)
+  document.getElementById('btn-fetch-covers-google')?.addEventListener('click', () => {
+    closeSettings();
+    fetchMissingCovers(state.books, 'missing', 'google');
   });
 
   // Refresh new covers (only books not yet done by Claude — skips finished ones)
