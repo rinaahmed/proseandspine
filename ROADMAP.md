@@ -25,7 +25,6 @@ when they're ready to be worked on._
 - **Series tracking** — group volumes into a series (Three-Body, One Piece, …); see read/unread and "next up". #21
 - **Filter shelves by tag / format / language** — shelves only have search + sort today; add filtering for a large multi-format/language library. #22
 - **Quick progress update for Currently Reading** — one-tap update of %/page on Reading cards. #23
-- **Shareable "Year in books" image** — export a summary card (PNG) from Stats. #24
 - **Tag management** — rename / merge tags across the library. #25
 
 ### Durability / infrastructure
@@ -43,6 +42,7 @@ _None open._
 
 ## Shipped
 
+- ✅ **Shareable "Year in books" card** — #24 — shipped in **v33.0–v33.4**. Editorial PNG from Stats (count, pages/best month, languages, highlights), with in-app preview, series collapsed, and a Stats "Highlights" list where you pin up to 5 reads to feature (`featured` flag on the book).
 - ✅ **AI import prompt** — shipped in **v32.10/32.11**. Copyable two-step prompt (numbered list → downloadable JSON) to turn a photo/screenshot of books into an importable file. Supersedes #8 (Audible import) — screenshot Audible and use this instead.
 - ✅ **Durable storage: persist + one-tap cloud backup** — #16 — persistent local storage in **v32.2** (`navigator.storage.persist()`), and one-tap "Back up to cloud" (share to OneDrive/iCloud/Files) in **v32.4**. Automatic OneDrive backup continues as #18.
 - ✅ **Fix staging banner cropping the Settings header** — #17 — shipped in **v32.3**. Offsets full-page modals below the banner on staging.
