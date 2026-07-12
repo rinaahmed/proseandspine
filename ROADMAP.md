@@ -20,7 +20,7 @@ _Nothing queued — pull from the backlog below._
 _Add new ideas here as one-liners; promote them to "Next up" and open an issue
 when they're ready to be worked on._
 
-- **Cloud backup / sync** — _layer 1 (persistent local storage) shipped in v32.2._ Remaining: opt-in cloud backup/sync so data survives device loss/reset — user's own Drive/Dropbox, or a Cloudflare-hosted backend. Keep it opt-in to preserve the on-device privacy default. #16
+- **Automatic cloud backup to OneDrive** — hands-off backup via Microsoft Graph (auto-write to the user's OneDrive, one-tap restore on a new device). Follow-on to the one-tap share backup. Needs Azure app + OAuth. #18
 - **Audible library import** _(undecided — may or may not build)_ — import audiobook titles from Audible via a selective checklist (untick a child's/private titles); no official API, needs a workaround source. Depends on multi-format (now shipped). #8
 
 ---
@@ -33,7 +33,7 @@ _None open._
 
 ## Shipped
 
-- ✅ **Persistent local storage** — #16 (layer 1) — shipped in **v32.2**. Requests `navigator.storage.persist()`; Settings shows the state. (Cloud backup/sync remains open under #16.)
+- ✅ **Durable storage: persist + one-tap cloud backup** — #16 — persistent local storage in **v32.2** (`navigator.storage.persist()`), and one-tap "Back up to cloud" (share to OneDrive/iCloud/Files) in **v32.4**. Automatic OneDrive backup continues as #18.
 - ✅ **Fix staging banner cropping the Settings header** — #17 — shipped in **v32.3**. Offsets full-page modals below the banner on staging.
 - ✅ **Per-shelf sort with sensible defaults** — #14 — shipped in **v32.1**. Each shelf remembers its own sort (Reading → started, Read → finished, TBR → added); added a "Date started" option; persists across sessions.
 - ✅ **Default finish date to today** — #15 — shipped in **v32.1**. Moving a book to Read without a date sets it to today so it sorts to the top.
