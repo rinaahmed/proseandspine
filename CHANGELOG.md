@@ -4,6 +4,27 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v32.11] — 2026-07-11
+
+### Changed
+- **AI import prompt is now a two-step flow** — the AI first lists recognised books as a flat numbered list so you can pick which to keep, then (after you reply with the numbers) generates a **downloadable** `.json` file rather than pasting it inline.
+
+---
+
+## [v32.10] — 2026-07-11
+
+### Added
+- **Copy AI import prompt** (Settings → Your library) — opens a ready-made prompt describing the app's exact import JSON format. Paste it into any AI assistant with a photo/screenshot of your books; it returns an importable file you can trim and load via Import backup (Add new only). A lightweight alternative to a built-in Audible/library import.
+
+---
+
+## [v32.9] — 2026-07-11
+
+### Changed
+- **Staging banner is now neon magenta** — bright magenta, bold uppercase white text, gentle pulse — so staging is obvious at a glance next to production (which has similar data). Staging-only; respects reduced-motion.
+
+---
+
 ## [v32.7] — 2026-07-11
 
 ### Changed

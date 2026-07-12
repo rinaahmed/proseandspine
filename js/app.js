@@ -1150,6 +1150,31 @@ function bindEvents() {
   document.getElementById('btn-backup-cloud')?.addEventListener('click', backupToCloud);
   document.getElementById('btn-export').addEventListener('click', exportData);
 
+  // AI import prompt — show, copy, close
+  document.getElementById('btn-ai-prompt')?.addEventListener('click', () => {
+    document.getElementById('ai-prompt-modal').classList.remove('hidden');
+  });
+  document.getElementById('ai-prompt-close')?.addEventListener('click', () => {
+    document.getElementById('ai-prompt-modal').classList.add('hidden');
+  });
+  document.getElementById('ai-prompt-modal')?.querySelector('.modal-overlay').addEventListener('click', () => {
+    document.getElementById('ai-prompt-modal').classList.add('hidden');
+  });
+  document.getElementById('ai-prompt-copy')?.addEventListener('click', async () => {
+    const text = document.getElementById('ai-prompt-text').value;
+    const btn = document.getElementById('ai-prompt-copy');
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied ✓';
+    } catch {
+      // Fallback: select the textarea so the user can copy manually
+      const ta = document.getElementById('ai-prompt-text');
+      ta.focus(); ta.select();
+      btn.textContent = 'Selected — press Copy';
+    }
+    setTimeout(() => { btn.textContent = 'Copy prompt'; }, 2000);
+  });
+
   // Delete all books (start fresh) — behind a confirmation modal
   document.getElementById('btn-reset-library')?.addEventListener('click', () => {
     document.getElementById('reset-count').textContent = state.books.length;

@@ -28,13 +28,13 @@
 
   <!-- ── Staging banner (auto-shown by JS when hostname contains "staging") -->
   <div id="staging-banner" class="staging-banner hidden" aria-label="Staging environment">
-    ⚠ STAGING &nbsp;·&nbsp; v32.7
+    ⚠ STAGING &nbsp;·&nbsp; v32.11
   </div>
 
   <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
-      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.7</span></h1>
+      <h1 class="app-title">Prose &amp; Spine <span class="app-version">v32.11</span></h1>
       <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Settings">
         <!-- equalizer / filter icon -->
         <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -337,6 +337,20 @@
           </button>
           <input type="file" id="import-file" accept=".json" style="display:none" aria-hidden="true">
 
+          <button class="settings-row" id="btn-ai-prompt">
+            <div class="settings-row-icon">
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 2.5l1.4 3.1L13.5 7 10.4 8.4 9 11.5 7.6 8.4 4.5 7l3.1-1.4z"/>
+                <path d="M14 11.5l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z"/>
+              </svg>
+            </div>
+            <div class="settings-row-text">
+              <span class="settings-row-title">Copy AI import prompt</span>
+              <span class="settings-row-sub">Turn a photo of books into an import file</span>
+            </div>
+            <svg class="settings-chevron" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L11 8 6 13"/></svg>
+          </button>
+
           <button class="settings-row" id="btn-backup-cloud">
             <div class="settings-row-icon">
               <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -447,7 +461,7 @@
       <div>
         <div class="settings-group-label">About</div>
         <div class="settings-group">
-          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.7</p>
+          <p class="settings-about" id="settings-about-text">Prose &amp; Spine keeps everything on this device — no account, no server. · v32.11</p>
         </div>
       </div>
 
@@ -512,6 +526,71 @@
 </div>
 
 
+<!-- ── AI import-prompt Modal ─────────────────────────────────────────── -->
+<div id="ai-prompt-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ai-prompt-title">
+  <div class="modal-overlay" tabindex="-1"></div>
+  <div class="modal-content modal-content--sm">
+    <div class="modal-header">
+      <h2 id="ai-prompt-title">AI import prompt</h2>
+      <button class="modal-close" id="ai-prompt-close" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="2" y1="2" x2="11" y2="11"/><line x1="11" y1="2" x2="2" y2="11"/>
+        </svg>
+      </button>
+    </div>
+    <div class="import-body">
+      <p>Copy this, paste it into any AI assistant, and attach a photo or screenshot of your books. It works in two steps: first it lists the books it recognises so you can pick which to keep, then it makes a downloadable JSON file. Save that file, then use <strong>Import backup</strong> here (choose <em>Add new only</em> to skip books you already have).</p>
+      <textarea id="ai-prompt-text" class="ai-prompt-text" readonly rows="14">You are helping me add books to my reading-tracker app "Prose & Spine". Work in TWO steps and wait for me between them.
+
+STEP 1 — Look at the attached photo(s)/screenshot and identify every book you can recognise. Output ONLY a flat numbered list, one book per line, in this format:
+
+1. Title — Author
+2. Title — Author
+3. Title — Author
+
+Do not write any JSON yet. After the list, ask me which numbers to include. Then stop and wait for my reply.
+
+STEP 2 — After I tell you which numbers to include, create a JSON file from just those books and give it to me as a DOWNLOADABLE .json file (not pasted inline in the chat). Use exactly this structure:
+
+{
+  "version": 1,
+  "books": [
+    {
+      "title": "The Name of the Rose",
+      "author": "Umberto Eco",
+      "shelf": "tbr",
+      "language": "en",
+      "formats": ["paper"],
+      "rating": 0,
+      "dateStarted": null,
+      "dateFinished": null,
+      "tags": "",
+      "notes": "",
+      "isbn": ""
+    }
+  ]
+}
+
+Field rules:
+- title, author: required strings.
+- shelf: one of "reading", "tbr", "read". Use "tbr" unless I tell you otherwise.
+- language: one of "en", "de", "ur", "fr". Use "en" if unsure.
+- formats: an array with any of "kindle", "paper", "audio". Use ["paper"] for physical books in a photo unless I say otherwise.
+- rating: a number 0–5 in 0.5 steps; use 0 if unknown.
+- dateStarted, dateFinished: "YYYY-MM-DD" or null.
+- tags: a comma-separated string like "sci-fi, classics"; use "" if none.
+- notes: a string; use "" if none.
+- isbn: the 13- or 10-digit ISBN if you can determine it, otherwise "". (This helps the app avoid duplicates.)
+
+Name the file something like prose-and-spine-import.json.</textarea>
+      <div class="import-actions">
+        <button id="ai-prompt-copy" class="btn btn-primary">Copy prompt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ── Import-confirm Modal ───────────────────────────────────────────── -->
 <div id="import-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
   <div class="modal-overlay" tabindex="-1"></div>
@@ -545,7 +624,7 @@
 
 <script>
 (async () => {
-  const V = '32.7';
+  const V = '32.11';
   if (new URLSearchParams(location.search).get('cb') === V) return;
   if (localStorage.getItem('app-version') === V) return;
   localStorage.setItem('app-version', V);
