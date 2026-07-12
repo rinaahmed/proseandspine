@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.2] — 2026-07-11
+
+### Changed
+- **Preview the year-in-books card before sharing** — "Share my year" now shows the rendered card in a preview modal with **Share** and **Save image** buttons, so you see exactly what you're sending before it goes out.
+
+---
+
 ## [v33.1] — 2026-07-11
 
 ### Changed

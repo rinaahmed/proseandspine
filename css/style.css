@@ -994,6 +994,16 @@ body:has(.staging-banner:not(.hidden)) .modal--page .modal-content {
 .st-hf { height: 100%; border-radius: 999px; min-width: 4px; }
 .st-hc { font-size: 0.74rem; color: var(--text3); text-align: right; }
 
+.share-preview-img {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  margin: 6px auto 4px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
 .st-share-btn {
   margin-top: 26px;
   width: 100%;

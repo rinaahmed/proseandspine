@@ -623,6 +623,10 @@ function drawShareCard(d) {
   return cv;
 }
 
+let _shareFile = null;
+let _shareUrl = null;
+
+// Render the card and show it in a preview modal so the user sees it first.
 async function shareYearCard() {
   const d = buildShareYear();
   if (!d.count) { alert('No finished books in this year yet — nothing to share.'); return; }
@@ -630,17 +634,33 @@ async function shareYearCard() {
   const canvas = drawShareCard(d);
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   if (!blob) { alert('Could not create the image.'); return; }
-  const file = new File([blob], `prose-and-spine-${d.year}.png`, { type: 'image/png' });
 
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); return; }
-    catch (e) { if (e.name === 'AbortError') return; }
-  }
-  // Fallback: download
-  const url = URL.createObjectURL(blob);
+  if (_shareUrl) URL.revokeObjectURL(_shareUrl);
+  _shareFile = new File([blob], `prose-and-spine-${d.year}.png`, { type: 'image/png' });
+  _shareUrl = URL.createObjectURL(blob);
+  document.getElementById('share-preview-img').src = _shareUrl;
+
+  // Only show the native Share button when the platform can share the file
+  const canShare = !!(navigator.canShare && navigator.canShare({ files: [_shareFile] }));
+  document.getElementById('share-preview-share').style.display = canShare ? '' : 'none';
+
+  document.getElementById('share-preview-modal').classList.remove('hidden');
+}
+
+async function shareCurrentCard() {
+  if (!_shareFile) return;
+  try { await navigator.share({ files: [_shareFile] }); }
+  catch (e) { if (e.name !== 'AbortError') downloadCurrentCard(); }
+}
+
+function downloadCurrentCard() {
+  if (!_shareUrl || !_shareFile) return;
   const a = document.createElement('a');
-  a.href = url; a.download = file.name; a.click();
-  URL.revokeObjectURL(url);
+  a.href = _shareUrl; a.download = _shareFile.name; a.click();
+}
+
+function closeSharePreview() {
+  document.getElementById('share-preview-modal').classList.add('hidden');
 }
 
 // ─── Star Input Widget ────────────────────────────────────────────────────────
@@ -1359,6 +1379,12 @@ function bindEvents() {
   document.getElementById('btn-export').addEventListener('click', exportData);
 
   // AI import prompt — show, copy, close
+  // Year-in-books share preview
+  document.getElementById('share-preview-share')?.addEventListener('click', shareCurrentCard);
+  document.getElementById('share-preview-download')?.addEventListener('click', downloadCurrentCard);
+  document.getElementById('share-preview-close')?.addEventListener('click', closeSharePreview);
+  document.getElementById('share-preview-modal')?.querySelector('.modal-overlay').addEventListener('click', closeSharePreview);
+
   document.getElementById('btn-ai-prompt')?.addEventListener('click', () => {
     document.getElementById('ai-prompt-modal').classList.remove('hidden');
   });
