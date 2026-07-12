@@ -4,6 +4,13 @@ All notable changes to Prose & Spine are documented here.
 
 ---
 
+## [v33.6] — 2026-07-11
+
+### Added
+- **Per-book cover options in the Add/Edit form** — the cover picker now has **Find (Google)** (free, no credits) alongside **Find (Claude)**, plus a **"paste an image URL"** field to set any cover by hand. Handy for non-English editions: temporarily set an English title, Find (Google), pick the cover, revert the title, and save — the chosen cover sticks.
+
+---
+
 ## [v33.5] — 2026-07-11
 
 ### Added
